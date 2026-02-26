@@ -13,6 +13,7 @@ const TEAM_QUERY = `
           name
           email
           avatarUrl
+          active
           assignedIssues(
             filter: { state: { type: { nin: ["completed", "canceled"] } } }
             first: 50
@@ -46,6 +47,7 @@ interface TeamData {
         name: string;
         email: string;
         avatarUrl: string | null;
+        active: boolean;
         assignedIssues: {
           nodes: {
             id: string;
@@ -80,7 +82,8 @@ export async function GET(request: NextRequest) {
     const data = await linearQuery<TeamData>(TEAM_QUERY, { teamId }, linearApiKey);
     const now = Date.now();
 
-    const members = data.team.members.nodes.map((user) => {
+    const activeUsers = data.team.members.nodes.filter((user) => user.active);
+    const members = activeUsers.map((user) => {
       const issues = user.assignedIssues.nodes;
       let inProgressCount = 0;
       let hasOverdue = false;

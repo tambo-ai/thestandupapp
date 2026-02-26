@@ -2,14 +2,27 @@
 
 import { authClient } from "@/lib/auth-client";
 import { SettingsModal } from "@/components/settings-modal";
+import { getGithubToken, getLinearApiKey, tokenReady } from "@/lib/user-tokens";
 import { Settings, LogOut } from "lucide-react";
 import * as React from "react";
 
 export function UserHeader() {
   const { data: session } = authClient.useSession();
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [needsSetup, setNeedsSetup] = React.useState(false);
 
   const user = session?.user;
+
+  // Check if tokens are configured (wait for crypto key to be ready first)
+  React.useEffect(() => {
+    let active = true;
+    tokenReady()
+      .then(() => Promise.all([getGithubToken(), getLinearApiKey()]))
+      .then(([gh, lin]) => {
+        if (active) setNeedsSetup(!gh || !lin);
+      });
+    return () => { active = false; };
+  }, [settingsOpen]); // re-check after settings modal closes
 
   return (
     <>
@@ -53,6 +66,17 @@ export function UserHeader() {
           <LogOut className="w-3.5 h-3.5 text-[#888]" />
         </button>
       </div>
+
+      {needsSetup && (
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="flex items-center gap-1.5 mx-3 mt-2 px-3 py-1.5 rounded-md text-[11px] text-left cursor-pointer transition-colors hover:bg-[rgba(0,0,0,0.03)]"
+          style={{ color: "#999" }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#F59E0B" }} />
+          Add your API keys to get started
+        </button>
+      )}
 
       <SettingsModal
         isOpen={settingsOpen}

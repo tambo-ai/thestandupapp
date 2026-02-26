@@ -233,7 +233,7 @@ function EmptyCanvas() {
           {[
             "Show me the state of the team",
             "What's at risk?",
-            "This week's goals",
+            "What am I working on?",
           ].map((suggestion) => (
             <span
               key={suggestion}

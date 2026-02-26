@@ -5,12 +5,12 @@ import { MessageThreadFull } from "@/components/tambo/message-thread-full";
 import { UserHeader } from "@/components/user-header";
 import { authClient } from "@/lib/auth-client";
 import { components, tools } from "@/lib/tambo";
-import { setTokenUserId } from "@/lib/user-tokens";
+import { getSelectedTeam, setTokenUserId, tokenReady } from "@/lib/user-tokens";
 import type { InitialInputMessage } from "@tambo-ai/react";
 import { TamboProvider } from "@tambo-ai/react";
 import * as React from "react";
 
-function buildSystemPrompt(userName: string, userEmail: string): InitialInputMessage {
+function buildSystemPrompt(userName: string, userEmail: string, selectedTeam?: { id: string; name: string } | null): InitialInputMessage {
   return {
     role: "system",
     content: [
@@ -46,7 +46,7 @@ General rules:
 - Keep chat responses brief — 1-2 sentences. Rich data goes in canvas components.
 - When a component accepts direct data (WeeklyGoals items, SummaryPanel, Graph), PREFER filling it yourself using tool results. Only fall back to self-fetching IDs when direct data isn't practical.
 - Be creative — combine stats, sections, and body text to answer any question.
-- If the user asks which team, use listTeams to show options.
+- ${selectedTeam ? `The user's selected team is "${selectedTeam.name}" (ID: ${selectedTeam.id}). Use this team by default for any team-related requests. Don't ask them which team unless they explicitly want a different one.` : "If the user asks about a team, use listTeams to show options."}
 - When the user asks about themselves ("what am I working on?", "show my PRs"), use getMyPRs for GitHub and look up their Linear identity by matching name/email via getTeamMembers.`,
       },
     ],
@@ -59,14 +59,19 @@ function AppShell() {
   const userName = session?.user?.name ?? "";
   const userEmail = session?.user?.email ?? "";
   const userToken = session?.session?.token;
+  const [selectedTeam, setSelectedTeam] = React.useState<{ id: string; name: string } | null>(null);
 
   React.useEffect(() => {
-    if (userId) { setTokenUserId(userId); }
+    if (userId) {
+      setTokenUserId(userId).then(() => {
+        getSelectedTeam().then(setSelectedTeam);
+      });
+    }
   }, [userId]);
 
   const systemPrompt = React.useMemo(
-    () => buildSystemPrompt(userName, userEmail),
-    [userName, userEmail],
+    () => buildSystemPrompt(userName, userEmail, selectedTeam),
+    [userName, userEmail, selectedTeam],
   );
 
   const [chatWidth, setChatWidth] = React.useState(400);

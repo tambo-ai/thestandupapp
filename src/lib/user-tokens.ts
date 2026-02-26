@@ -6,6 +6,8 @@
 
 let _userId: string | null = null;
 let _cryptoKey: CryptoKey | null = null;
+let _readyResolve: (() => void) | null = null;
+let _ready: Promise<void> = new Promise((r) => { _readyResolve = r; });
 
 const SALT = "tambo-standup-token-salt";
 
@@ -64,6 +66,12 @@ async function decrypt(stored: string): Promise<string> {
 export async function setTokenUserId(userId: string) {
   _userId = userId;
   _cryptoKey = await deriveKey(userId);
+  if (_readyResolve) { _readyResolve(); _readyResolve = null; }
+}
+
+/** Resolves once setTokenUserId has been called and the crypto key is derived. */
+export function tokenReady(): Promise<void> {
+  return _ready;
 }
 
 function key(base: string): string {
@@ -101,6 +109,23 @@ export async function getGithubOrg(): Promise<string> {
 export async function setGithubOrg(value: string) {
   const encrypted = await encrypt(value);
   localStorage.setItem(key("user-github-org"), encrypted);
+}
+
+export async function getSelectedTeam(): Promise<{ id: string; name: string } | null> {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(key("user-selected-team")) ?? "";
+  const decrypted = await decrypt(raw);
+  if (!decrypted) return null;
+  try { return JSON.parse(decrypted); } catch { return null; }
+}
+
+export async function setSelectedTeam(team: { id: string; name: string } | null) {
+  if (!team) {
+    localStorage.removeItem(key("user-selected-team"));
+    return;
+  }
+  const encrypted = await encrypt(JSON.stringify(team));
+  localStorage.setItem(key("user-selected-team"), encrypted);
 }
 
 export async function getTokenHeaders(): Promise<Record<string, string>> {
