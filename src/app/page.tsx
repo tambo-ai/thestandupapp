@@ -5,7 +5,8 @@ import { MessageThreadFull } from "@/components/tambo/message-thread-full";
 import { UserHeader } from "@/components/user-header";
 import { authClient } from "@/lib/auth-client";
 import { components, tools } from "@/lib/tambo";
-import { getFilteredMembers, getSelectedTeam, getTokenHeaders, setTokenUserId, tokenReady } from "@/lib/user-tokens";
+import { resolveFilteredMemberNames } from "@/lib/member-filter";
+import { getSelectedTeam, setTokenUserId } from "@/lib/user-tokens";
 import type { InitialInputMessage } from "@tambo-ai/react";
 import { TamboProvider } from "@tambo-ai/react";
 import * as React from "react";
@@ -68,22 +69,9 @@ function AppShell() {
       setTokenUserId(userId).then(async () => {
         const team = await getSelectedTeam();
         setSelectedTeam(team);
-        const ids = await getFilteredMembers();
-        if (ids && team) {
-          try {
-            const headers = await getTokenHeaders();
-            const res = await fetch(`/api/linear/team?id=${team.id}`, { headers });
-            const data = await res.json();
-            if (data?.members && Array.isArray(data.members)) {
-              const idSet = new Set(ids);
-              const names = data.members
-                .filter((m: { linearUserId: string }) => idSet.has(m.linearUserId))
-                .map((m: { name: string }) => m.name);
-              setFilteredMemberNames(names);
-            }
-          } catch {
-            setFilteredMemberNames(null);
-          }
+        if (team) {
+          const names = await resolveFilteredMemberNames(team.id);
+          setFilteredMemberNames(names);
         } else {
           setFilteredMemberNames(null);
         }

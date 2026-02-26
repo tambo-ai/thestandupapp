@@ -1,7 +1,7 @@
 "use client";
 
+import { resolveFilteredMemberNames } from "@/lib/member-filter";
 import { useFetchJSON } from "@/lib/use-fetch-json";
-import { getFilteredMembers, getTokenHeaders } from "@/lib/user-tokens";
 import * as React from "react";
 import { z } from "zod";
 
@@ -160,25 +160,10 @@ export function RiskReport({
   const [allowedNames, setAllowedNames] = React.useState<Set<string> | null>(null);
 
   React.useEffect(() => {
-    getFilteredMembers().then(async (ids) => {
-      if (!ids || !teamId) { setAllowedNames(null); return; }
-      try {
-        const headers = await getTokenHeaders();
-        const res = await fetch(`/api/linear/team?id=${teamId}`, { headers });
-        const teamData = await res.json();
-        if (teamData?.members && Array.isArray(teamData.members)) {
-          const idSet = new Set(ids);
-          const names = new Set<string>(
-            teamData.members
-              .filter((m: { linearUserId: string }) => idSet.has(m.linearUserId))
-              .map((m: { name: string }) => m.name),
-          );
-          setAllowedNames(names);
-        }
-      } catch {
-        setAllowedNames(null);
-      }
-    });
+    if (!teamId) { setAllowedNames(null); return; }
+    resolveFilteredMemberNames(teamId).then((names) =>
+      setAllowedNames(names ? new Set(names) : null),
+    );
   }, [teamId]);
 
   if (!teamId) return null;

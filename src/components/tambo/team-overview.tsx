@@ -1,9 +1,8 @@
 "use client";
 
+import { useFilteredMemberIds } from "@/lib/member-filter";
 import { useFetchJSON } from "@/lib/use-fetch-json";
-import { getFilteredMembers } from "@/lib/user-tokens";
 import { useTamboThreadInput } from "@tambo-ai/react";
-import * as React from "react";
 import { z } from "zod";
 
 export const teamOverviewSchema = z.object({
@@ -132,11 +131,7 @@ export function TeamOverview({
   const { data, error } = useFetchJSON<TeamData>(
     teamId ? `/api/linear/team?id=${teamId}` : null,
   );
-  const [filterIds, setFilterIds] = React.useState<Set<string> | null>(null);
-
-  React.useEffect(() => {
-    getFilteredMembers().then((ids) => setFilterIds(ids ? new Set(ids) : null));
-  }, []);
+  const filterIds = useFilteredMemberIds();
 
   if (!teamId) return null;
 
