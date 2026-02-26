@@ -128,6 +128,23 @@ export async function setSelectedTeam(team: { id: string; name: string } | null)
   localStorage.setItem(key("user-selected-team"), encrypted);
 }
 
+export async function getFilteredMembers(): Promise<string[] | null> {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(key("user-filtered-members")) ?? "";
+  const decrypted = await decrypt(raw);
+  if (!decrypted) return null;
+  try { return JSON.parse(decrypted); } catch { return null; }
+}
+
+export async function setFilteredMembers(ids: string[] | null) {
+  if (ids === null) {
+    localStorage.removeItem(key("user-filtered-members"));
+    return;
+  }
+  const encrypted = await encrypt(JSON.stringify(ids));
+  localStorage.setItem(key("user-filtered-members"), encrypted);
+}
+
 export async function getTokenHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
   const [gh, linear, org] = await Promise.all([getGithubToken(), getLinearApiKey(), getGithubOrg()]);

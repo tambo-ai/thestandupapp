@@ -5,10 +5,12 @@ import {
   getGithubOrg,
   getLinearApiKey,
   getSelectedTeam,
+  getFilteredMembers,
   setGithubToken as saveGithubToken,
   setGithubOrg as saveGithubOrg,
   setLinearApiKey as saveLinearApiKey,
   setSelectedTeam as saveSelectedTeam,
+  setFilteredMembers as saveFilteredMembers,
   getTokenHeaders,
 } from "@/lib/user-tokens";
 import { X, Github, ExternalLink, ChevronDown, Check, Loader2 } from "lucide-react";
@@ -16,6 +18,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 interface Team { id: string; name: string; key: string }
+interface TeamMember { linearUserId: string; name: string; avatar?: string }
 
 export function SettingsModal({
   isOpen,
@@ -31,18 +34,25 @@ export function SettingsModal({
   const [teams, setTeams] = React.useState<Team[]>([]);
   const [teamsLoading, setTeamsLoading] = React.useState(false);
   const [teamDropdownOpen, setTeamDropdownOpen] = React.useState(false);
+  const [teamMembers, setTeamMembers] = React.useState<TeamMember[]>([]);
+  const [membersLoading, setMembersLoading] = React.useState(false);
+  const [checkedMemberIds, setCheckedMemberIds] = React.useState<Set<string> | null>(null); // null = all
   const [saved, setSaved] = React.useState(false);
 
   React.useEffect(() => {
     if (isOpen) {
       let active = true;
-      Promise.all([getGithubToken(), getGithubOrg(), getLinearApiKey(), getSelectedTeam()]).then(([gh, org, lin, team]) => {
+      Promise.all([getGithubToken(), getGithubOrg(), getLinearApiKey(), getSelectedTeam(), getFilteredMembers()]).then(([gh, org, lin, team, filtered]) => {
         if (!active) return;
         setGithubToken(gh);
         setGithubOrg(org);
         setLinearApiKey(lin);
         setSelectedTeam(team);
-        if (lin) fetchTeams(lin, active).then(t => { if (active && t) setTeams(t); });
+        setCheckedMemberIds(filtered ? new Set(filtered) : null);
+        if (lin) {
+          fetchTeams(lin, active).then(t => { if (active && t) setTeams(t); });
+          if (team) fetchTeamMembers(lin, team.id, active);
+        }
       });
       setSaved(false);
       return () => { active = false; };
@@ -78,6 +88,28 @@ export function SettingsModal({
     }
   }
 
+  async function fetchTeamMembers(apiKey: string, teamId: string, active: boolean) {
+    setMembersLoading(true);
+    try {
+      const headers = await getTokenHeaders();
+      headers["x-linear-api-key"] = apiKey;
+      const res = await fetch(`/api/linear/team?id=${teamId}`, { headers });
+      const data = await res.json();
+      if (!active) return;
+      if (data?.members && Array.isArray(data.members)) {
+        setTeamMembers(data.members.map((m: TeamMember) => ({
+          linearUserId: m.linearUserId,
+          name: m.name,
+          avatar: m.avatar,
+        })));
+      }
+    } catch {
+      // ignore — member list is optional
+    } finally {
+      if (active) setMembersLoading(false);
+    }
+  }
+
   const handleLinearKeyBlur = async () => {
     const trimmed = linearApiKey.trim();
     if (trimmed && trimmed.startsWith("lin_")) {
@@ -93,6 +125,7 @@ export function SettingsModal({
       saveGithubOrg(githubOrg.trim()),
       saveLinearApiKey(linearApiKey.trim()),
       saveSelectedTeam(selectedTeam),
+      saveFilteredMembers(checkedMemberIds ? Array.from(checkedMemberIds) : null),
     ]);
     setSaved(true);
     setTimeout(() => onClose(), 600);
@@ -242,8 +275,14 @@ export function SettingsModal({
                             key={team.id}
                             type="button"
                             onClick={() => {
+                              const changed = selectedTeam?.id !== team.id;
                               setSelectedTeam({ id: team.id, name: team.name });
                               setTeamDropdownOpen(false);
+                              if (changed) {
+                                setCheckedMemberIds(null);
+                                setTeamMembers([]);
+                                fetchTeamMembers(linearApiKey.trim(), team.id, true);
+                              }
                             }}
                             className="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-left hover:bg-[rgba(0,0,0,0.03)] transition-colors cursor-pointer"
                           >
@@ -262,6 +301,91 @@ export function SettingsModal({
                     Enter your API key and click outside to load teams
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Member filter — shows after team is selected */}
+            {selectedTeam && !membersLoading && teamMembers.length > 0 && (
+              <div>
+                <label className="block text-[12px] font-medium text-[#555] mb-1.5">
+                  Focus on members
+                  <span className="text-[10px] font-normal text-[#BBB] ml-1">optional</span>
+                </label>
+                {/* All toggle */}
+                <button
+                  type="button"
+                  onClick={() => setCheckedMemberIds(checkedMemberIds === null ? new Set(teamMembers.map(m => m.linearUserId)) : null)}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-[rgba(0,0,0,0.02)] transition-colors cursor-pointer text-left"
+                >
+                  <span
+                    className="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors"
+                    style={{
+                      borderColor: checkedMemberIds === null ? "#1A1A1A" : "rgba(0,0,0,0.15)",
+                      background: checkedMemberIds === null ? "#1A1A1A" : "transparent",
+                    }}
+                  >
+                    {checkedMemberIds === null && <Check className="w-2.5 h-2.5 text-white" />}
+                  </span>
+                  <span className="text-[12px] font-medium" style={{ color: "#555" }}>All members</span>
+                </button>
+                {/* Individual members */}
+                <div className="max-h-[140px] overflow-y-auto mt-0.5">
+                  {teamMembers.map((member) => {
+                    const isChecked = checkedMemberIds === null || checkedMemberIds.has(member.linearUserId);
+                    return (
+                      <button
+                        key={member.linearUserId}
+                        type="button"
+                        onClick={() => {
+                          if (checkedMemberIds === null) {
+                            // Switching from "all" to individual: check everyone except this one
+                            const all = new Set(teamMembers.map(m => m.linearUserId));
+                            all.delete(member.linearUserId);
+                            setCheckedMemberIds(all);
+                          } else {
+                            const next = new Set(checkedMemberIds);
+                            if (next.has(member.linearUserId)) {
+                              next.delete(member.linearUserId);
+                            } else {
+                              next.add(member.linearUserId);
+                            }
+                            // If all are checked again, go back to null (show all)
+                            if (next.size === teamMembers.length) {
+                              setCheckedMemberIds(null);
+                            } else {
+                              setCheckedMemberIds(next);
+                            }
+                          }
+                        }}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-[rgba(0,0,0,0.02)] transition-colors cursor-pointer text-left"
+                      >
+                        <span
+                          className="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors"
+                          style={{
+                            borderColor: isChecked ? "#1A1A1A" : "rgba(0,0,0,0.15)",
+                            background: isChecked ? "#1A1A1A" : "transparent",
+                          }}
+                        >
+                          {isChecked && <Check className="w-2.5 h-2.5 text-white" />}
+                        </span>
+                        {member.avatar ? (
+                          <img src={member.avatar} alt="" className="w-5 h-5 rounded-full shrink-0" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-[#F0F0F0] flex items-center justify-center text-[10px] font-medium text-[#888] shrink-0">
+                            {member.name?.charAt(0) || "?"}
+                          </div>
+                        )}
+                        <span className="text-[12px] truncate" style={{ color: "#333" }}>{member.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {selectedTeam && membersLoading && (
+              <div className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-[#999]">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Loading members...
               </div>
             )}
           </fieldset>

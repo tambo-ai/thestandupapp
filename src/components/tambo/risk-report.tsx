@@ -1,6 +1,8 @@
 "use client";
 
 import { useFetchJSON } from "@/lib/use-fetch-json";
+import { getFilteredMembers, getTokenHeaders } from "@/lib/user-tokens";
+import * as React from "react";
 import { z } from "zod";
 
 export const riskReportSchema = z.object({
@@ -155,6 +157,29 @@ export function RiskReport({
   const { data, error } = useFetchJSON<RiskData>(
     teamId ? `/api/linear/risks?teamId=${teamId}` : null,
   );
+  const [allowedNames, setAllowedNames] = React.useState<Set<string> | null>(null);
+
+  React.useEffect(() => {
+    getFilteredMembers().then(async (ids) => {
+      if (!ids || !teamId) { setAllowedNames(null); return; }
+      try {
+        const headers = await getTokenHeaders();
+        const res = await fetch(`/api/linear/team?id=${teamId}`, { headers });
+        const teamData = await res.json();
+        if (teamData?.members && Array.isArray(teamData.members)) {
+          const idSet = new Set(ids);
+          const names = new Set<string>(
+            teamData.members
+              .filter((m: { linearUserId: string }) => idSet.has(m.linearUserId))
+              .map((m: { name: string }) => m.name),
+          );
+          setAllowedNames(names);
+        }
+      } catch {
+        setAllowedNames(null);
+      }
+    });
+  }, [teamId]);
 
   if (!teamId) return null;
 
@@ -187,7 +212,14 @@ export function RiskReport({
     );
   }
 
-  const visibleSections = data.sections.filter((s) => s.items.length > 0);
+  const filteredSections = allowedNames
+    ? data.sections.map((s) => ({
+        ...s,
+        items: s.items.filter((item) => !item.assignee || allowedNames.has(item.assignee)),
+      }))
+    : data.sections;
+  const visibleSections = filteredSections.filter((s) => s.items.length > 0);
+  const filteredTotalRisks = visibleSections.reduce((sum, s) => sum + s.items.length, 0);
 
   if (visibleSections.length === 0) {
     return (
@@ -219,7 +251,7 @@ export function RiskReport({
             className="text-[11px] px-2 py-0.5 rounded-full font-medium"
             style={{ color: badgeStyle.color, background: badgeStyle.bg }}
           >
-            {data.totalRisks} {data.totalRisks === 1 ? "item" : "items"}
+            {filteredTotalRisks} {filteredTotalRisks === 1 ? "item" : "items"}
           </span>
         </div>
         {data.generatedAt && (

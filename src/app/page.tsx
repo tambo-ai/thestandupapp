@@ -5,12 +5,12 @@ import { MessageThreadFull } from "@/components/tambo/message-thread-full";
 import { UserHeader } from "@/components/user-header";
 import { authClient } from "@/lib/auth-client";
 import { components, tools } from "@/lib/tambo";
-import { getSelectedTeam, setTokenUserId, tokenReady } from "@/lib/user-tokens";
+import { getFilteredMembers, getSelectedTeam, getTokenHeaders, setTokenUserId, tokenReady } from "@/lib/user-tokens";
 import type { InitialInputMessage } from "@tambo-ai/react";
 import { TamboProvider } from "@tambo-ai/react";
 import * as React from "react";
 
-function buildSystemPrompt(userName: string, userEmail: string, selectedTeam?: { id: string; name: string } | null): InitialInputMessage {
+function buildSystemPrompt(userName: string, userEmail: string, selectedTeam?: { id: string; name: string } | null, filteredMemberNames?: string[] | null): InitialInputMessage {
   return {
     role: "system",
     content: [
@@ -47,7 +47,8 @@ General rules:
 - When a component accepts direct data (WeeklyGoals items, SummaryPanel, Graph), PREFER filling it yourself using tool results. Only fall back to self-fetching IDs when direct data isn't practical.
 - Be creative — combine stats, sections, and body text to answer any question.
 - ${selectedTeam ? `The user's selected team is "${selectedTeam.name}" (ID: ${selectedTeam.id}). Use this team by default for any team-related requests. Don't ask them which team unless they explicitly want a different one.` : "If the user asks about a team, use listTeams to show options."}
-- When the user asks about themselves ("what am I working on?", "show my PRs"), use getMyPRs for GitHub and look up their Linear identity by matching name/email via getTeamMembers.`,
+- When the user asks about themselves ("what am I working on?", "show my PRs"), use getMyPRs for GitHub and look up their Linear identity by matching name/email via getTeamMembers.
+${filteredMemberNames && filteredMemberNames.length > 0 ? `- The user has filtered to these team members: ${filteredMemberNames.join(", ")}. Focus on these people for team queries and reports.` : ""}`,
       },
     ],
   };
@@ -60,18 +61,39 @@ function AppShell() {
   const userEmail = session?.user?.email ?? "";
   const userToken = session?.session?.token;
   const [selectedTeam, setSelectedTeam] = React.useState<{ id: string; name: string } | null>(null);
+  const [filteredMemberNames, setFilteredMemberNames] = React.useState<string[] | null>(null);
 
   React.useEffect(() => {
     if (userId) {
-      setTokenUserId(userId).then(() => {
-        getSelectedTeam().then(setSelectedTeam);
+      setTokenUserId(userId).then(async () => {
+        const team = await getSelectedTeam();
+        setSelectedTeam(team);
+        const ids = await getFilteredMembers();
+        if (ids && team) {
+          try {
+            const headers = await getTokenHeaders();
+            const res = await fetch(`/api/linear/team?id=${team.id}`, { headers });
+            const data = await res.json();
+            if (data?.members && Array.isArray(data.members)) {
+              const idSet = new Set(ids);
+              const names = data.members
+                .filter((m: { linearUserId: string }) => idSet.has(m.linearUserId))
+                .map((m: { name: string }) => m.name);
+              setFilteredMemberNames(names);
+            }
+          } catch {
+            setFilteredMemberNames(null);
+          }
+        } else {
+          setFilteredMemberNames(null);
+        }
       });
     }
   }, [userId]);
 
   const systemPrompt = React.useMemo(
-    () => buildSystemPrompt(userName, userEmail, selectedTeam),
-    [userName, userEmail, selectedTeam],
+    () => buildSystemPrompt(userName, userEmail, selectedTeam, filteredMemberNames),
+    [userName, userEmail, selectedTeam, filteredMemberNames],
   );
 
   const [chatWidth, setChatWidth] = React.useState(400);
