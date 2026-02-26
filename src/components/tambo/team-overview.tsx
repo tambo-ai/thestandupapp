@@ -1,6 +1,6 @@
 "use client";
 
-import { useFilteredMemberIds } from "@/lib/member-filter";
+import { useFilteredMemberIds, type TeamMember } from "@/lib/member-filter";
 import { useFetchJSON } from "@/lib/use-fetch-json";
 import { useTamboThreadInput } from "@tambo-ai/react";
 import { z } from "zod";
@@ -9,16 +9,6 @@ export const teamOverviewSchema = z.object({
   teamId: z.string().describe("Linear team ID"),
   teamName: z.string().optional().describe("Team display name"),
 });
-
-interface TeamMember {
-  linearUserId: string;
-  name: string;
-  avatar?: string;
-  role?: string;
-  inProgressIssues: number;
-  status: "on-track" | "at-risk" | "idle";
-  topIssue?: string;
-}
 
 const STATUS_CONFIG = {
   "on-track": { color: "#4CAF50", label: "On track" },

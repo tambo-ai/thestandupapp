@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchTeamMembers as fetchMembers, type TeamMember } from "@/lib/member-filter";
 import {
   getGithubToken,
   getGithubOrg,
@@ -18,7 +19,6 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 interface Team { id: string; name: string; key: string }
-interface TeamMember { linearUserId: string; name: string; avatar?: string }
 
 export function SettingsModal({
   isOpen,
@@ -51,7 +51,7 @@ export function SettingsModal({
         setCheckedMemberIds(filtered ? new Set(filtered) : null);
         if (lin) {
           fetchTeams(lin, active).then(t => { if (active && t) setTeams(t); });
-          if (team) fetchTeamMembers(lin, team.id, active);
+          if (team) loadTeamMembers(team.id, active);
         }
       });
       setSaved(false);
@@ -88,21 +88,11 @@ export function SettingsModal({
     }
   }
 
-  async function fetchTeamMembers(apiKey: string, teamId: string, active: boolean) {
+  async function loadTeamMembers(teamId: string, active: boolean) {
     setMembersLoading(true);
     try {
-      const headers = await getTokenHeaders();
-      headers["x-linear-api-key"] = apiKey;
-      const res = await fetch(`/api/linear/team?id=${teamId}`, { headers });
-      const data = await res.json();
-      if (!active) return;
-      if (data?.members && Array.isArray(data.members)) {
-        setTeamMembers(data.members.map((m: TeamMember) => ({
-          linearUserId: m.linearUserId,
-          name: m.name,
-          avatar: m.avatar,
-        })));
-      }
+      const members = await fetchMembers(teamId);
+      if (active) setTeamMembers(members);
     } catch {
       // ignore — member list is optional
     } finally {
@@ -281,7 +271,7 @@ export function SettingsModal({
                               if (changed) {
                                 setCheckedMemberIds(null);
                                 setTeamMembers([]);
-                                fetchTeamMembers(linearApiKey.trim(), team.id, true);
+                                loadTeamMembers(team.id, true);
                               }
                             }}
                             className="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-left hover:bg-[rgba(0,0,0,0.03)] transition-colors cursor-pointer"
