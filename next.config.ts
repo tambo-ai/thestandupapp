@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Externalize native/Node-only packages used by Better Auth + Turso
+  serverExternalPackages: ["@libsql/client", "@libsql/kysely-libsql", "libsql"],
   // Stub optional peer deps from @standard-community/standard-json
   webpack: (config) => {
     config.resolve.alias = {

@@ -1,5 +1,5 @@
 {
-  "name": "verceldemo",
+  "name": "thestandupapp",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,11 +11,12 @@
     "init": "npx tambo init"
   },
   "dependencies": {
+    "@libsql/kysely-libsql": "^0.4.1",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-tooltip": "^1.2.7",
     "@tailwindcss/oxide": "^4.1.17",
     "@tambo-ai/react": "^1.0.1",
-    "@tambo-ai/typescript-sdk": "^0.89.0",
     "@tiptap/extension-document": "^3.17.1",
     "@tiptap/extension-hard-break": "^3.17.1",
     "@tiptap/extension-mention": "^3.17.1",
@@ -24,17 +25,17 @@
     "@tiptap/extension-text": "^3.17.1",
     "@tiptap/react": "^3.17.1",
     "@tiptap/suggestion": "^3.17.1",
+    "better-auth": "^1.4.19",
     "class-variance-authority": "^0.7.1",
     "dompurify": "^3.3.0",
     "framer-motion": "^12.23.24",
     "highlight.js": "^11.11.1",
     "json-stringify-pretty-compact": "^4.0.0",
+    "kysely": "^0.28.11",
     "lucide-react": "^0.554.0",
     "next": "^15.5.7",
-    "radix-ui": "^1.4.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-markdown": "^10.1.0",
     "recharts": "^3.5.0",
     "streamdown": "^1.6.7",
     "use-debounce": "^10.1.0"

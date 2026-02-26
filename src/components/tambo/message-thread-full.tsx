@@ -4,10 +4,6 @@ import type { messageVariants } from "@/components/tambo/message";
 import {
   MessageInput,
   MessageInputError,
-  MessageInputFileButton,
-  MessageInputMcpConfigButton,
-  MessageInputMcpPromptButton,
-  MessageInputMcpResourceButton,
   MessageInputSubmitButton,
   MessageInputTextarea,
   MessageInputToolbar,
@@ -35,22 +31,10 @@ import type { Suggestion } from "@tambo-ai/react";
 import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
 
-/**
- * Props for the MessageThreadFull component
- */
 export interface MessageThreadFullProps extends React.HTMLAttributes<HTMLDivElement> {
-  /**
-   * Controls the visual styling of messages in the thread.
-   * Possible values include: "default", "compact", etc.
-   * These values are defined in messageVariants from "@/components/tambo/message".
-   * @example variant="compact"
-   */
   variant?: VariantProps<typeof messageVariants>["variant"];
 }
 
-/**
- * A full-screen chat thread component with message history, input, and suggestions
- */
 export const MessageThreadFull = React.forwardRef<
   HTMLDivElement,
   MessageThreadFullProps
@@ -70,27 +54,26 @@ export const MessageThreadFull = React.forwardRef<
   const defaultSuggestions: Suggestion[] = [
     {
       id: "suggestion-1",
-      title: "Get started",
-      detailedSuggestion: "What can you help me with?",
-      messageId: "welcome-query",
+      title: "Show me the state of the team",
+      detailedSuggestion: "Show me an overview of what everyone on the team is working on.",
+      messageId: "team-overview",
     },
     {
       id: "suggestion-2",
-      title: "Learn more",
-      detailedSuggestion: "Tell me about your capabilities.",
-      messageId: "capabilities-query",
+      title: "What's at risk?",
+      detailedSuggestion: "What items need attention? Show me overdue, stale, or unassigned work.",
+      messageId: "risk-report",
     },
     {
       id: "suggestion-3",
-      title: "Examples",
-      detailedSuggestion: "Show me some example queries I can try.",
-      messageId: "examples-query",
+      title: "This week's goals",
+      detailedSuggestion: "What are the goals for this week's cycle? Show me progress.",
+      messageId: "weekly-goals",
     },
   ];
 
   return (
     <div className="flex h-full w-full">
-      {/* Thread History Sidebar - rendered first if history is on the left */}
       {historyPosition === "left" && threadHistorySidebar}
 
       <ThreadContainer
@@ -105,34 +88,25 @@ export const MessageThreadFull = React.forwardRef<
           </ThreadContent>
         </ScrollableMessageContainer>
 
-        {/* Message suggestions status */}
         <MessageSuggestions>
           <MessageSuggestionsStatus />
         </MessageSuggestions>
 
-        {/* Message input */}
         <div className="px-4 pb-4">
           <MessageInput>
-            <MessageInputTextarea placeholder="Type your message or paste images..." />
+            <MessageInputTextarea placeholder="Ask anything..." />
             <MessageInputToolbar>
-              <MessageInputFileButton />
-              <MessageInputMcpPromptButton />
-              <MessageInputMcpResourceButton />
-              {/* Uncomment this to enable client-side MCP config modal button */}
-              <MessageInputMcpConfigButton />
               <MessageInputSubmitButton />
             </MessageInputToolbar>
             <MessageInputError />
           </MessageInput>
         </div>
 
-        {/* Message suggestions */}
         <MessageSuggestions initialSuggestions={defaultSuggestions}>
           <MessageSuggestionsList />
         </MessageSuggestions>
       </ThreadContainer>
 
-      {/* Thread History Sidebar - rendered last if history is on the right */}
       {historyPosition === "right" && threadHistorySidebar}
     </div>
   );

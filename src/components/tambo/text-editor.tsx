@@ -231,33 +231,40 @@ function SuggestionPopover<T extends SuggestionItem>({
             {emptyMessage}
           </div>
         ) : (
-          <div className="flex flex-col gap-0.5 p-1">
-            {state.items.map((item, index) => (
-              <button
-                key={item.id}
-                type="button"
-                className={cn(
-                  "flex items-start gap-2 px-2 py-2 text-sm rounded-md text-left",
-                  "hover:bg-accent hover:text-accent-foreground transition-colors",
-                  index === state.selectedIndex &&
-                    "bg-accent text-accent-foreground",
-                )}
-                onClick={() => state.command?.(item)}
-              >
-                {item.icon ?? defaultIcon}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{item.name}</div>
-                  <div
-                    className={cn(
-                      "text-xs text-muted-foreground truncate",
-                      monoSecondary && "font-mono",
-                    )}
-                  >
-                    {item.id}
+          <div className="flex flex-col gap-0.5 p-1 max-h-[220px] overflow-y-auto">
+            {state.items.map((item, index) => {
+              const isSelected = index === state.selectedIndex;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  ref={(el) => {
+                    if (isSelected && el) {
+                      el.scrollIntoView({ block: "nearest" });
+                    }
+                  }}
+                  className={cn(
+                    "flex items-start gap-2 px-2 py-2 text-sm rounded-md text-left shrink-0",
+                    "hover:bg-accent hover:text-accent-foreground transition-colors",
+                    isSelected && "bg-accent text-accent-foreground",
+                  )}
+                  onClick={() => state.command?.(item)}
+                >
+                  {item.icon ?? defaultIcon}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{item.name}</div>
+                    <div
+                      className={cn(
+                        "text-xs text-muted-foreground truncate",
+                        monoSecondary && "font-mono",
+                      )}
+                    >
+                      {item.id}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         )}
       </Popover.Content>

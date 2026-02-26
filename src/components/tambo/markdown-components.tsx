@@ -137,8 +137,10 @@ export const createMarkdownComponents = (): Record<
 
     const highlighted = React.useMemo(() => {
       if (!match || !looksLikeCode(deferredContent)) return null;
+      const lang = match[1];
       try {
-        return hljs.highlight(deferredContent, { language: match[1] }).value;
+        if (!hljs.getLanguage(lang)) return null;
+        return hljs.highlight(deferredContent, { language: lang }).value;
       } catch {
         return deferredContent;
       }
@@ -182,7 +184,7 @@ export const createMarkdownComponents = (): Record<
   /**
    * Paragraph component with minimal vertical margin
    */
-  p: ({ children }) => <p className="my-0">{children}</p>,
+  p: ({ children }) => <div className="my-0">{children}</div>,
 
   /**
    * Heading 1 component with large text and proper spacing

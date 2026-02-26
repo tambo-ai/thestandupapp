@@ -115,8 +115,10 @@ const filterResourceItems = (
   if (query === "") return resourceItems;
 
   const normalizedQuery = query.toLocaleLowerCase();
-  return resourceItems.filter((item) =>
-    item.name.toLocaleLowerCase().includes(normalizedQuery),
+  return resourceItems.filter(
+    (item) =>
+      item.name.toLocaleLowerCase().includes(normalizedQuery) ||
+      item.id.toLocaleLowerCase().includes(normalizedQuery),
   );
 };
 
@@ -203,11 +205,11 @@ function useCombinedResourceList(
     };
   }, [externalProvider, debouncedSearch]);
 
-  // Combine and dedupe - MCP resources are already filtered by the hook
-  // External items need to be filtered locally
+  // Combine, filter locally, and dedupe
   const combined = React.useMemo(() => {
+    const filteredMcp = filterResourceItems(mcpItems, search);
     const filteredExternal = filterResourceItems(externalItems, search);
-    return dedupeResourceItems([...mcpItems, ...filteredExternal]);
+    return dedupeResourceItems([...filteredMcp, ...filteredExternal]);
   }, [mcpItems, externalItems, search]);
 
   return combined;
@@ -1158,7 +1160,12 @@ const MessageInputError = React.forwardRef<
 >(({ className, ...props }, ref) => {
   const { error, submitError, imageError } = useMessageInputContext();
 
-  if (!error && !submitError && !imageError) {
+  // Suppress transient API errors (e.g. ephemeral message 404s) that aren't actionable
+  const errorMsg = error?.message ?? submitError ?? imageError;
+  const isTransient =
+    typeof errorMsg === "string" && /not found in thread/i.test(errorMsg);
+
+  if ((!error && !submitError && !imageError) || isTransient) {
     return null;
   }
 
@@ -1169,7 +1176,7 @@ const MessageInputError = React.forwardRef<
       data-slot="message-input-error"
       {...props}
     >
-      {error?.message ?? submitError ?? imageError}
+      {errorMsg}
     </p>
   );
 });
