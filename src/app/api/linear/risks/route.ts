@@ -1,5 +1,5 @@
-import { linearQuery } from "@/lib/linear-gql";
-import { NextRequest, NextResponse } from "next/server";
+import { withLinearClient } from "@/lib/linear-client";
+import { NextResponse } from "next/server";
 
 const RISKS_QUERY = `
   query TeamRisks($teamId: String!) {
@@ -48,90 +48,79 @@ interface RiskSection {
   items: RiskItem[];
 }
 
-export async function GET(request: NextRequest) {
-  const linearApiKey = request.headers.get("x-linear-api-key");
-  if (!linearApiKey) {
-    return NextResponse.json({ error: "Linear API key not provided" }, { status: 401 });
+export const GET = withLinearClient(async (linear, request) => {
+  const { searchParams } = new URL(request.url);
+  const teamId = searchParams.get("teamId");
+
+  if (!teamId) {
+    return NextResponse.json({ error: "teamId is required" }, { status: 400 });
   }
 
-  try {
-    const { searchParams } = new URL(request.url);
-    const teamId = searchParams.get("teamId");
+  const data = await linear.query<{ team: { name: string; issues: { nodes: RiskIssue[] } } }>(
+    RISKS_QUERY,
+    { teamId },
+  );
 
-    if (!teamId) {
-      return NextResponse.json({ error: "teamId is required" }, { status: 400 });
-    }
+  const now = Date.now();
+  const overdue: RiskItem[] = [];
+  const stale: RiskItem[] = [];
+  const unassigned: RiskItem[] = [];
 
-    const data = await linearQuery<{ team: { name: string; issues: { nodes: RiskIssue[] } } }>(
-      RISKS_QUERY,
-      { teamId },
-      linearApiKey,
+  for (const issue of data.team.issues.nodes) {
+    const assigneeName = issue.assignee?.displayName || issue.assignee?.name;
+    const daysSinceUpdate = Math.floor(
+      (now - new Date(issue.updatedAt).getTime()) / 86400000,
     );
 
-    const now = Date.now();
-    const overdue: RiskItem[] = [];
-    const stale: RiskItem[] = [];
-    const unassigned: RiskItem[] = [];
-
-    for (const issue of data.team.issues.nodes) {
-      const assigneeName = issue.assignee?.displayName || issue.assignee?.name;
-      const daysSinceUpdate = Math.floor(
-        (now - new Date(issue.updatedAt).getTime()) / 86400000,
-      );
-
-      if (issue.dueDate && new Date(issue.dueDate).getTime() < now) {
-        overdue.push({
-          identifier: issue.identifier,
-          title: issue.title,
-          assignee: assigneeName,
-          reason: `Due ${new Date(issue.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
-          daysSinceUpdate,
-          url: issue.url,
-        });
-      }
-
-      if (issue.state?.type === "started" && daysSinceUpdate >= 3) {
-        stale.push({
-          identifier: issue.identifier,
-          title: issue.title,
-          assignee: assigneeName,
-          reason: `No updates in ${daysSinceUpdate} days`,
-          daysSinceUpdate,
-          url: issue.url,
-        });
-      }
-
-      if (!issue.assignee) {
-        unassigned.push({
-          identifier: issue.identifier,
-          title: issue.title,
-          reason: "No assignee",
-          url: issue.url,
-        });
-      }
+    if (issue.dueDate && new Date(issue.dueDate).getTime() < now) {
+      overdue.push({
+        identifier: issue.identifier,
+        title: issue.title,
+        assignee: assigneeName,
+        reason: `Due ${new Date(issue.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+        daysSinceUpdate,
+        url: issue.url,
+      });
     }
 
-    const sections: RiskSection[] = [];
-    if (overdue.length > 0) sections.push({ category: "overdue", severity: "high", items: overdue });
-    if (stale.length > 0) sections.push({ category: "stale", severity: "medium", items: stale });
-    if (unassigned.length > 0) sections.push({ category: "unassigned", severity: "medium", items: unassigned });
+    if (issue.state?.type === "started" && daysSinceUpdate >= 3) {
+      stale.push({
+        identifier: issue.identifier,
+        title: issue.title,
+        assignee: assigneeName,
+        reason: `No updates in ${daysSinceUpdate} days`,
+        daysSinceUpdate,
+        url: issue.url,
+      });
+    }
 
-    return NextResponse.json(
-      {
-        teamName: data.team.name,
-        generatedAt: new Date().toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-        }),
-        sections,
-        totalRisks: overdue.length + stale.length + unassigned.length,
-      },
-      { headers: { "Cache-Control": "private, max-age=120" } },
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (!issue.assignee) {
+      unassigned.push({
+        identifier: issue.identifier,
+        title: issue.title,
+        reason: "No assignee",
+        url: issue.url,
+      });
+    }
   }
-}
+
+  const sections: RiskSection[] = [];
+  if (overdue.length > 0) sections.push({ category: "overdue", severity: "high", items: overdue });
+  if (stale.length > 0) sections.push({ category: "stale", severity: "medium", items: stale });
+  if (unassigned.length > 0) sections.push({ category: "unassigned", severity: "medium", items: unassigned });
+
+  return NextResponse.json(
+    {
+      teamName: data.team.name,
+      generatedAt: new Date().toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      sections,
+      totalRisks: overdue.length + stale.length + unassigned.length,
+    },
+    { headers: { "Cache-Control": "private, max-age=120" } },
+  );
+});

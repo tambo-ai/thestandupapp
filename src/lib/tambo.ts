@@ -127,7 +127,49 @@ const getMyPRs = defineTool({
   ),
 });
 
-export const tools: TamboTool[] = [listTeams, getTeamMembers, findGitHubUser, getMyPRs];
+const searchIssues = defineTool({
+  name: "searchIssues",
+  description:
+    "Search Linear issues by keyword or natural language query. Returns matching issues with status, assignee, priority, and labels. Use when the user asks to find issues, look up tickets, or search for work items.",
+  tool: async ({ query, limit }) => {
+    const params = new URLSearchParams({ query });
+    if (limit) params.set("first", String(limit));
+    return apiFetch<
+      {
+        identifier: string;
+        title: string;
+        url: string;
+        priority: string;
+        status: string;
+        statusType: string;
+        assignee: string | null;
+        labels: string[];
+        updatedAt: string;
+        createdAt: string;
+      }[]
+    >(`/api/linear/search?${params}`);
+  },
+  inputSchema: z.object({
+    query: z.string().describe("Search query — keywords, issue identifier, or natural language"),
+    limit: z.number().optional().describe("Max results to return (default 20, max 50)"),
+  }),
+  outputSchema: z.array(
+    z.object({
+      identifier: z.string(),
+      title: z.string(),
+      url: z.string(),
+      priority: z.string(),
+      status: z.string(),
+      statusType: z.string(),
+      assignee: z.string().nullable(),
+      labels: z.array(z.string()),
+      updatedAt: z.string(),
+      createdAt: z.string(),
+    }),
+  ),
+});
+
+export const tools: TamboTool[] = [listTeams, getTeamMembers, findGitHubUser, getMyPRs, searchIssues];
 
 export const components: TamboComponent[] = [
   {

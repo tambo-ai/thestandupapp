@@ -1,5 +1,5 @@
-import { linearQuery } from "@/lib/linear-gql";
-import { NextRequest, NextResponse } from "next/server";
+import { withLinearClient } from "@/lib/linear-client";
+import { NextResponse } from "next/server";
 
 const CYCLE_QUERY = `
   query Cycle($cycleId: String!) {
@@ -106,38 +106,28 @@ function formatRange(start: string, end: string): string {
   return `${new Date(start).toLocaleDateString("en-US", opts)} – ${new Date(end).toLocaleDateString("en-US", opts)}`;
 }
 
-export async function GET(request: NextRequest) {
-  const linearApiKey = request.headers.get("x-linear-api-key");
-  if (!linearApiKey) {
-    return NextResponse.json({ error: "Linear API key not provided" }, { status: 401 });
-  }
+export const GET = withLinearClient(async (linear, request) => {
+  const { searchParams } = new URL(request.url);
+  const cycleId = searchParams.get("id");
+  const teamId = searchParams.get("teamId");
 
-  try {
-    const { searchParams } = new URL(request.url);
-    const cycleId = searchParams.get("id");
-    const teamId = searchParams.get("teamId");
-
-    if (cycleId) {
-      const data = await linearQuery<{ cycle: CycleRaw }>(CYCLE_QUERY, { cycleId }, linearApiKey);
-      return NextResponse.json(formatCycle(data.cycle), {
-        headers: { "Cache-Control": "private, max-age=120" },
-      });
-    }
-
-    if (!teamId) {
-      return NextResponse.json({ error: "teamId or id is required" }, { status: 400 });
-    }
-
-    const data = await linearQuery<{ team: { activeCycle: CycleRaw | null } }>(ACTIVE_CYCLE_QUERY, { teamId }, linearApiKey);
-    if (!data.team.activeCycle) {
-      return NextResponse.json({ error: "No active cycle found" }, { status: 404 });
-    }
-
-    return NextResponse.json(formatCycle(data.team.activeCycle), {
+  if (cycleId) {
+    const data = await linear.query<{ cycle: CycleRaw }>(CYCLE_QUERY, { cycleId });
+    return NextResponse.json(formatCycle(data.cycle), {
       headers: { "Cache-Control": "private, max-age=120" },
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  if (!teamId) {
+    return NextResponse.json({ error: "teamId or id is required" }, { status: 400 });
+  }
+
+  const data = await linear.query<{ team: { activeCycle: CycleRaw | null } }>(ACTIVE_CYCLE_QUERY, { teamId });
+  if (!data.team.activeCycle) {
+    return NextResponse.json({ error: "No active cycle found" }, { status: 404 });
+  }
+
+  return NextResponse.json(formatCycle(data.team.activeCycle), {
+    headers: { "Cache-Control": "private, max-age=120" },
+  });
+});
