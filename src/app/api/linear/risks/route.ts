@@ -1,38 +1,6 @@
 import { withLinearClient } from "@/lib/linear-client";
 import { NextResponse } from "next/server";
 
-const RISKS_QUERY = `
-  query TeamRisks($teamId: String!) {
-    team(id: $teamId) {
-      name
-      issues(
-        filter: { state: { type: { nin: ["completed", "canceled"] } } }
-        first: 100
-      ) {
-        nodes {
-          identifier
-          title
-          url
-          dueDate
-          updatedAt
-          state { type }
-          assignee { displayName name }
-        }
-      }
-    }
-  }
-`;
-
-interface RiskIssue {
-  identifier: string;
-  title: string;
-  url: string;
-  dueDate: string | null;
-  updatedAt: string;
-  state: { type: string } | null;
-  assignee: { displayName: string; name: string } | null;
-}
-
 interface RiskItem {
   identifier: string;
   title: string;
@@ -56,18 +24,21 @@ export const GET = withLinearClient(async (linear, request) => {
     return NextResponse.json({ error: "teamId is required" }, { status: 400 });
   }
 
-  const data = await linear.query<{ team: { name: string; issues: { nodes: RiskIssue[] } } }>(
-    RISKS_QUERY,
-    { teamId },
-  );
+  const team = await linear.team(teamId);
+  const issuesConn = await team.issues({
+    first: 100,
+    filter: { state: { type: { nin: ["completed", "canceled"] } } },
+  });
 
   const now = Date.now();
   const overdue: RiskItem[] = [];
   const stale: RiskItem[] = [];
   const unassigned: RiskItem[] = [];
 
-  for (const issue of data.team.issues.nodes) {
-    const assigneeName = issue.assignee?.displayName || issue.assignee?.name;
+  for (const issue of issuesConn.nodes) {
+    const assignee = await issue.assignee;
+    const state = await issue.state;
+    const assigneeName = assignee?.displayName || assignee?.name;
     const daysSinceUpdate = Math.floor(
       (now - new Date(issue.updatedAt).getTime()) / 86400000,
     );
@@ -83,7 +54,7 @@ export const GET = withLinearClient(async (linear, request) => {
       });
     }
 
-    if (issue.state?.type === "started" && daysSinceUpdate >= 3) {
+    if (state?.type === "started" && daysSinceUpdate >= 3) {
       stale.push({
         identifier: issue.identifier,
         title: issue.title,
@@ -94,7 +65,7 @@ export const GET = withLinearClient(async (linear, request) => {
       });
     }
 
-    if (!issue.assignee) {
+    if (!assignee) {
       unassigned.push({
         identifier: issue.identifier,
         title: issue.title,
@@ -105,13 +76,20 @@ export const GET = withLinearClient(async (linear, request) => {
   }
 
   const sections: RiskSection[] = [];
-  if (overdue.length > 0) sections.push({ category: "overdue", severity: "high", items: overdue });
-  if (stale.length > 0) sections.push({ category: "stale", severity: "medium", items: stale });
-  if (unassigned.length > 0) sections.push({ category: "unassigned", severity: "medium", items: unassigned });
+  if (overdue.length > 0)
+    sections.push({ category: "overdue", severity: "high", items: overdue });
+  if (stale.length > 0)
+    sections.push({ category: "stale", severity: "medium", items: stale });
+  if (unassigned.length > 0)
+    sections.push({
+      category: "unassigned",
+      severity: "medium",
+      items: unassigned,
+    });
 
   return NextResponse.json(
     {
-      teamName: data.team.name,
+      teamName: team.name,
       generatedAt: new Date().toLocaleString("en-US", {
         month: "short",
         day: "numeric",

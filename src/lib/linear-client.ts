@@ -1,35 +1,7 @@
+import { LinearClient } from "@linear/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-const LINEAR_API = "https://api.linear.app/graphql";
-
-export class LinearClient {
-  constructor(private apiKey: string) {}
-
-  async query<T>(
-    query: string,
-    variables?: Record<string, unknown>,
-  ): Promise<T> {
-    const res = await fetch(LINEAR_API, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: this.apiKey,
-      },
-      body: JSON.stringify({ query, variables }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Linear API error ${res.status}: ${text}`);
-    }
-
-    const json = await res.json();
-    if (json.errors?.length) {
-      throw new Error(json.errors[0].message);
-    }
-    return json.data as T;
-  }
-}
+export { LinearClient } from "@linear/sdk";
 
 /**
  * Create a LinearClient from a NextRequest's x-linear-api-key header.
@@ -45,7 +17,7 @@ export function linearClientFromRequest(
       { status: 401 },
     );
   }
-  return new LinearClient(apiKey);
+  return new LinearClient({ apiKey });
 }
 
 /**

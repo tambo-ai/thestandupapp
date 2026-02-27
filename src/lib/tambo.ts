@@ -143,7 +143,7 @@ const searchIssues = defineTool({
         status: string;
         statusType: string;
         assignee: string | null;
-        labels: string[];
+        labelIds: string[];
         updatedAt: string;
         createdAt: string;
       }[]
@@ -162,7 +162,7 @@ const searchIssues = defineTool({
       status: z.string(),
       statusType: z.string(),
       assignee: z.string().nullable(),
-      labels: z.array(z.string()),
+      labelIds: z.array(z.string()),
       updatedAt: z.string(),
       createdAt: z.string(),
     }),
