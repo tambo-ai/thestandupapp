@@ -1,6 +1,14 @@
 import { withLinearClient } from "@/lib/linear-client";
 import { NextResponse } from "next/server";
 
+/**
+ * GET /api/linear/search — Search Linear issues by keyword.
+ *
+ * @query query - Search term (required)
+ * @query first - Max results, default 20, max 50
+ *
+ * @returns Array of issues with identifier, title, url, priority, status, assignee, and labelIds.
+ */
 export const GET = withLinearClient(async (linear, request) => {
   const { searchParams } = new URL(request.url);
   const term = searchParams.get("query");

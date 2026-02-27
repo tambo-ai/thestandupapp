@@ -2,6 +2,10 @@ import { withLinearClient } from "@/lib/linear-client";
 import type { Cycle, Issue } from "@linear/sdk";
 import { NextResponse } from "next/server";
 
+/**
+ * Transform a Linear Cycle into a serializable summary with per-issue
+ * status (done / in-progress / not-started) and at-risk flags.
+ */
 async function formatCycle(cycle: Cycle) {
   const now = Date.now();
   const issuesConn = await cycle.issues({ first: 100 });
@@ -44,6 +48,16 @@ async function formatCycle(cycle: Cycle) {
   };
 }
 
+/**
+ * GET /api/linear/cycle — Fetch a cycle's issues and progress.
+ *
+ * @query id      - Cycle ID (returns that specific cycle)
+ * @query teamId  - Team ID (returns the team's active cycle)
+ *
+ * At least one of `id` or `teamId` is required.
+ *
+ * @returns `{ cycleId, cycleName, dateRange, totalItems, completedItems, items }`
+ */
 export const GET = withLinearClient(async (linear, request) => {
   const { searchParams } = new URL(request.url);
   const cycleId = searchParams.get("id");

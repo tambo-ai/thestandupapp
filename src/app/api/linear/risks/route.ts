@@ -1,6 +1,7 @@
 import { withLinearClient } from "@/lib/linear-client";
 import { NextResponse } from "next/server";
 
+/** A single at-risk issue with a human-readable reason. */
 interface RiskItem {
   identifier: string;
   title: string;
@@ -10,12 +11,23 @@ interface RiskItem {
   url?: string;
 }
 
+/** A group of risk items (overdue, stale, or unassigned). */
 interface RiskSection {
   category: string;
   severity: "high" | "medium";
   items: RiskItem[];
 }
 
+/**
+ * GET /api/linear/risks — Identify at-risk issues for a team.
+ *
+ * Fetches open issues and categorizes them as overdue (past due date),
+ * stale (in-progress but no update for 3+ days), or unassigned.
+ *
+ * @query teamId - Linear team ID (required)
+ *
+ * @returns `{ teamName, generatedAt, sections, totalRisks }`
+ */
 export const GET = withLinearClient(async (linear, request) => {
   const { searchParams } = new URL(request.url);
   const teamId = searchParams.get("teamId");

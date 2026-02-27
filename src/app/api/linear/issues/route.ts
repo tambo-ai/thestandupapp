@@ -1,6 +1,14 @@
 import { withLinearClient } from "@/lib/linear-client";
 import { NextResponse } from "next/server";
 
+/**
+ * GET /api/linear/issues — Fetch issues assigned to a specific user.
+ *
+ * @query userId - Linear user ID (required)
+ *
+ * @returns Array of the user's 20 most recently updated issues with identifier,
+ *          title, url, priorityLabel, updatedAt, and workflow state.
+ */
 export const GET = withLinearClient(async (linear, request) => {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");

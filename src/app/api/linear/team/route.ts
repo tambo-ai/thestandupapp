@@ -1,6 +1,16 @@
 import { withLinearClient } from "@/lib/linear-client";
 import { NextResponse } from "next/server";
 
+/**
+ * GET /api/linear/team — List teams or get a single team's members.
+ *
+ * Without `id`: returns all teams as `{ id, name, key }[]`.
+ * With `id`: returns `{ teamId, teamName, members }` where each member
+ * includes their open issue count, risk status (on-track / at-risk / idle),
+ * and top in-progress issue title.
+ *
+ * @query id - Linear team ID (optional — omit to list all teams)
+ */
 export const GET = withLinearClient(async (linear, request) => {
   const { searchParams } = new URL(request.url);
   const teamId = searchParams.get("id");
