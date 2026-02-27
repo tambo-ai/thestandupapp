@@ -54,7 +54,14 @@ npx @better-auth/cli@latest migrate
 npm run dev
 ```
 
-5. Open [localhost:3000](http://localhost:3000), sign in with Google, then open **Settings** to connect your GitHub token, GitHub org, and Linear API key. Select a team and optionally filter to specific members.
+5. Open [localhost:3000](http://localhost:3000) and sign in with Google.
+
+6. Open **Settings** and add your API keys:
+   - **GitHub personal access token** — [create one](https://github.com/settings/tokens) with `repo` and `read:org` scopes
+   - **Linear API key** — [create one](https://linear.app/settings/api)
+   - **GitHub org** (optional) — for reliable cross-platform user matching
+
+7. Select a team and optionally filter to specific members.
 
 ## Components
 
