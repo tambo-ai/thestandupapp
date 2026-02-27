@@ -2,8 +2,8 @@ import { withLinearClient } from "@/lib/linear-client";
 import { NextResponse } from "next/server";
 
 const SEARCH_ISSUES_QUERY = `
-  query SearchIssues($query: String!, $first: Int) {
-    issueSearch(query: $query, first: $first) {
+  query SearchIssues($filter: IssueFilter, $first: Int) {
+    issues(filter: $filter, first: $first, orderBy: updatedAt) {
       nodes {
         identifier
         title
@@ -40,11 +40,19 @@ export const GET = withLinearClient(async (linear, request) => {
     return NextResponse.json({ error: "query is required" }, { status: 400 });
   }
 
-  const data = await linear.query<{
-    issueSearch: { nodes: SearchIssueNode[] };
-  }>(SEARCH_ISSUES_QUERY, { query, first });
+  // Search by title OR description containing the query (case-insensitive)
+  const filter = {
+    or: [
+      { title: { containsIgnoreCase: query } },
+      { description: { containsIgnoreCase: query } },
+    ],
+  };
 
-  const issues = data.issueSearch.nodes.map((n) => ({
+  const data = await linear.query<{
+    issues: { nodes: SearchIssueNode[] };
+  }>(SEARCH_ISSUES_QUERY, { filter, first });
+
+  const issues = data.issues.nodes.map((n) => ({
     identifier: n.identifier,
     title: n.title,
     url: n.url,
