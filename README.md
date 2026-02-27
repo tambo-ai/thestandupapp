@@ -1,23 +1,28 @@
 # The Standup App
 
-AI-powered team standup dashboard that pulls data from Linear and GitHub. Built with [Tambo AI](https://tambo.co) for generative UI.
-
-Ask natural language questions about your team and get rich, interactive components on a canvas — team overviews, person details, risk reports, weekly goals, charts, and custom summaries.
+AI-powered team standup dashboard built with [Tambo AI](https://tambo.co). Connect your Linear and GitHub accounts, ask natural language questions about your team, and get rich interactive components on a live canvas.
 
 https://github.com/user-attachments/assets/d17682a7-e9e3-401e-b8a3-998aaf258d06
 
+## What you can ask
+
+- "Show me the team" — renders a full team overview with statuses
+- "What's Sarah working on?" — pulls up her Linear issues and GitHub PRs
+- "What's at risk?" — surfaces overdue, stale, and unassigned items
+- "Show me a breakdown of issue status" — generates a chart
+- "What did the team ship this week?" — builds a custom summary
+
 ## Features
 
-- **Google OAuth** sign-in via Better Auth + Turso
-- **Per-user API keys** for GitHub and Linear (encrypted in localStorage)
-- **AI canvas** with up to 4 components in an adaptive grid, drag-and-drop reordering
-- **Self-fetching components** — TeamOverview, PersonDetail, RiskReport pull their own data
-- **AI-controlled components** — WeeklyGoals, SummaryPanel, Graph are filled by the AI
-- **GitHub org member matching** — configure your GitHub org for reliable user lookups
+- **Conversational AI canvas** — ask questions in plain English, get interactive components arranged in an adaptive grid (up to 4 at once, dismissable, drag-to-reorder)
+- **Linear + GitHub integration** — pulls issues, PRs, team members, and risk data in real time
+- **Member filter** — focus on specific team members; filters apply across all components and AI responses
+- **Per-user encrypted storage** — API keys are AES-GCM encrypted in localStorage, scoped per user
+- **Google OAuth** — sign-in via Better Auth + Turso
 
 ## Setup
 
-1. Clone and install:
+1. Install dependencies:
 
 ```bash
 npm install
@@ -29,12 +34,13 @@ npm install
 cp example.env.local .env.local
 ```
 
-You need:
-- `NEXT_PUBLIC_TAMBO_API_KEY` — from [tambo.co/dashboard](https://tambo.co/dashboard)
-- `BETTER_AUTH_SECRET` — generate with `openssl rand -base64 32`
-- `BETTER_AUTH_URL` — `http://localhost:3000` for local dev
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — from Google Cloud Console
-- `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` — from [Turso dashboard](https://turso.tech)
+| Variable | Where to get it |
+|----------|----------------|
+| `NEXT_PUBLIC_TAMBO_API_KEY` | [tambo.co/dashboard](https://tambo.co/dashboard) |
+| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | `http://localhost:3000` for local dev |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
+| `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | [Turso dashboard](https://turso.tech) |
 
 3. Run the database migration:
 
@@ -48,28 +54,47 @@ npx @better-auth/cli@latest migrate
 npm run dev
 ```
 
-5. Open [localhost:3000](http://localhost:3000), sign in with Google, then open Settings to enter your GitHub token, GitHub org, and Linear API key.
+5. Open [localhost:3000](http://localhost:3000), sign in with Google, then open **Settings** to connect your GitHub token, GitHub org, and Linear API key. Select a team and optionally filter to specific members.
 
 ## Components
 
-| Component | Description |
-|-----------|-------------|
-| TeamOverview | All team members with status, issue counts, top issue |
-| PersonDetail | One person's Linear issues and GitHub PRs |
-| RiskReport | Overdue, stale, and unassigned items |
-| WeeklyGoals | Progress tracker with grouped items |
-| SummaryPanel | Flexible panel for any structured data |
-| Graph | Bar, line, or pie charts |
+The AI decides which components to render based on your question.
 
-## Tech Stack
+| Component | Trigger | Data source |
+|-----------|---------|-------------|
+| **TeamOverview** | "show me the team" | Self-fetching (Linear team ID) |
+| **PersonDetail** | "what's [name] working on?" | Self-fetching (Linear user ID + GitHub) |
+| **RiskReport** | "what's at risk?", "blockers" | Self-fetching (Linear team ID) |
+| **WeeklyGoals** | "what are we working on this week?" | AI-assembled from tool results |
+| **SummaryPanel** | Any structured info request | AI-assembled (stats, sections, body text) |
+| **Graph** | "show me a chart of..." | AI-assembled (bar, line, or pie) |
 
-- [Next.js](https://nextjs.org) 15 with App Router
-- [React](https://react.dev) 19
-- [Tambo AI](https://tambo.co) for generative UI
-- [Better Auth](https://better-auth.com) + [Turso](https://turso.tech) for authentication
-- [Tailwind CSS](https://tailwindcss.com) v4
-- [Recharts](https://recharts.org) for charts
-- [Zod](https://zod.dev) for schema validation
+## Project structure
+
+```
+src/
+├── app/
+│   ├── page.tsx              # Main app shell, system prompt, TamboProvider
+│   ├── login/                # Login page
+│   └── api/
+│       ├── github/           # find-user, prs
+│       └── linear/           # team, issues, risks, cycle
+├── components/
+│   ├── tambo/                # AI-rendered canvas components
+│   ├── settings-modal.tsx    # API keys, team selection, member filter
+│   └── user-header.tsx       # Top bar with user info
+├── lib/
+│   ├── tambo.ts              # Component + tool registration
+│   ├── member-filter.ts      # Shared member filter logic (types, hooks, fetching)
+│   ├── user-tokens.ts        # Encrypted per-user localStorage
+│   └── use-fetch-json.ts     # Data fetching hook with auth headers
+└── services/
+    └── population-stats.ts   # Demo data
+```
+
+## Tech stack
+
+[Next.js 15](https://nextjs.org) / [React 19](https://react.dev) / [Tambo AI](https://tambo.co) / [Better Auth](https://better-auth.com) + [Turso](https://turso.tech) / [Tailwind CSS v4](https://tailwindcss.com) / [Recharts](https://recharts.org) / [Zod](https://zod.dev)
 
 ## Scripts
 
@@ -79,3 +104,8 @@ npm run dev
 | `npm run build` | Build for production |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
+| `npm run lint:fix` | Run ESLint with auto-fix |
+
+## License
+
+[MIT](LICENSE)
