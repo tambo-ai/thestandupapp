@@ -1,4 +1,4 @@
-import { GITHUB_API, ghHeaders, withGitHubToken } from "@/lib/github-client";
+import { GITHUB_API, ghHeaders, resolveGitHubLogin, withGitHubToken } from "@/lib/github-client";
 import { NextResponse } from "next/server";
 
 type PrState = "open" | "closed" | "merged" | "draft";
@@ -78,18 +78,7 @@ export const GET = withGitHubToken(async (token, request) => {
 
   // Resolve name/email to GitHub username if no author provided
   if (!login && (emailParam || nameParam)) {
-    const findRes = await fetch(
-      `${GITHUB_API}/search/users?q=${encodeURIComponent(
-        emailParam || nameParam || ""
-      )}${emailParam ? "+in:email" : ""}${org ? `+org:${encodeURIComponent(org)}` : ""}+type:user&per_page=1`,
-      { headers: ghHeaders(token) },
-    );
-    if (findRes.ok) {
-      const findData = await findRes.json();
-      if (findData.items?.[0]) {
-        login = findData.items[0].login;
-      }
-    }
+    login = await resolveGitHubLogin(token, { email: emailParam, name: nameParam, org });
   }
 
   // Only fall back to current user when no repo/org filter — allows "all PRs on repo" queries

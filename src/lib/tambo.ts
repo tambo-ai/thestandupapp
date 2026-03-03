@@ -1,10 +1,10 @@
-import { Graph, graphSchema } from "@/components/tambo/graph";
-import { TeamOverview, teamOverviewSchema } from "@/components/tambo/team-overview";
-import { PersonDetail, personDetailSchema } from "@/components/tambo/person-detail";
-import { PullRequestList, pullRequestListSchema } from "@/components/tambo/pull-request-list";
-import { WeeklyGoals, weeklyGoalsSchema } from "@/components/tambo/weekly-goals";
-import { RiskReport, riskReportSchema } from "@/components/tambo/risk-report";
-import { SummaryPanel, summaryPanelSchema } from "@/components/tambo/summary-panel";
+import { Graph, graphSchema } from "@/components/graph";
+import { TeamOverview, teamOverviewSchema } from "@/components/team-overview";
+import { PersonDetail, personDetailSchema } from "@/components/person-detail";
+import { PullRequestList, pullRequestListSchema } from "@/components/pull-request-list";
+import { WeeklyGoals, weeklyGoalsSchema } from "@/components/weekly-goals";
+import { RiskReport, riskReportSchema } from "@/components/risk-report";
+import { SummaryPanel, summaryPanelSchema } from "@/components/summary-panel";
 import { getTokenHeaders } from "@/lib/user-tokens";
 import type { TamboComponent, TamboTool } from "@tambo-ai/react";
 import { defineTool } from "@tambo-ai/react";

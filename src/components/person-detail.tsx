@@ -1,6 +1,6 @@
 "use client";
 
-import { FilterPills, toggleFilter, type FilterOption } from "@/components/tambo/filter-pills";
+import { FilterPills, toggleFilter, type FilterOption } from "@/components/filter-pills";
 import { useFetchJSON } from "@/lib/use-fetch-json";
 import { useMemo, useState } from "react";
 import { z } from "zod";
