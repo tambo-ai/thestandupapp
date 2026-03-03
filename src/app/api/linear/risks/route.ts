@@ -47,9 +47,15 @@ export const GET = withLinearClient(async (linear, request) => {
   const stale: RiskItem[] = [];
   const unassigned: RiskItem[] = [];
 
-  for (const issue of issuesConn.nodes) {
-    const assignee = await issue.assignee;
-    const state = await issue.state;
+  // Resolve all assignees and states in parallel (avoids N+1 queries)
+  const issueData = await Promise.all(
+    issuesConn.nodes.map(async (issue) => {
+      const [assignee, state] = await Promise.all([issue.assignee, issue.state]);
+      return { issue, assignee, state };
+    }),
+  );
+
+  for (const { issue, assignee, state } of issueData) {
     const assigneeName = assignee?.displayName || assignee?.name;
     const daysSinceUpdate = Math.floor(
       (now - new Date(issue.updatedAt).getTime()) / 86400000,

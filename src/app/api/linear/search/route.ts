@@ -22,8 +22,7 @@ export const GET = withLinearClient(async (linear, request) => {
 
   const issues = await Promise.all(
     results.nodes.map(async (n) => {
-      const state = await n.state;
-      const assignee = await n.assignee;
+      const [state, assignee] = await Promise.all([n.state, n.assignee]);
       return {
         identifier: n.identifier,
         title: n.title,

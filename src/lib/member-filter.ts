@@ -27,9 +27,12 @@ export interface TeamMember {
  * Fetches team members from the Linear team API.
  * Attaches the user's encrypted auth headers automatically.
  */
-export async function fetchTeamMembers(teamId: string): Promise<TeamMember[]> {
+export async function fetchTeamMembers(teamId: string, lite = false): Promise<TeamMember[]> {
   const headers = await getTokenHeaders();
-  const res = await fetch(`/api/linear/team?id=${teamId}`, { headers });
+  const url = lite
+    ? `/api/linear/team?id=${teamId}&lite=true`
+    : `/api/linear/team?id=${teamId}`;
+  const res = await fetch(url, { headers });
   const data = await res.json();
   if (data?.members && Array.isArray(data.members)) {
     return data.members;

@@ -4,7 +4,7 @@ import { MessageGenerationStage } from "./message-generation-stage";
 import { Tooltip, TooltipProvider } from "./suggestions-tooltip";
 import { cn } from "@/lib/utils";
 import type { Suggestion, TamboThreadMessage } from "@tambo-ai/react";
-import { useTambo, useTamboSuggestions } from "@tambo-ai/react";
+import { useTambo, useTamboSuggestions, useTamboThreadInput } from "@tambo-ai/react";
 import * as React from "react";
 import { useEffect, useRef } from "react";
 
@@ -98,17 +98,17 @@ const MessageSuggestions = React.forwardRef<
       isGenerating,
       error,
     } = useTamboSuggestions({ maxSuggestions });
+    const { setValue: setInputValue } = useTamboThreadInput();
 
-    // Combine initial and generated suggestions, but only use initial ones when thread is empty
+    // Use initial suggestions when thread is empty, generated ones otherwise
+    const usingInitial = !messages.length && initialSuggestions.length > 0;
     const suggestions = React.useMemo(() => {
-      // Only use pre-seeded suggestions if thread is empty
-      if (!messages.length && initialSuggestions.length > 0) {
+      if (usingInitial) {
         return initialSuggestions.slice(0, maxSuggestions);
       }
-      // Otherwise use generated suggestions
       return generatedSuggestions;
     }, [
-      messages.length,
+      usingInitial,
       generatedSuggestions,
       initialSuggestions,
       maxSuggestions,
@@ -126,8 +126,9 @@ const MessageSuggestions = React.forwardRef<
         suggestions,
         selectedSuggestionId,
         accept,
-        isGenerating,
-        error,
+        // Don't report generating when showing pre-seeded initial suggestions
+        isGenerating: usingInitial ? false : isGenerating,
+        error: usingInitial ? null : error,
         messages,
         isStreaming,
         isMac,
@@ -138,6 +139,7 @@ const MessageSuggestions = React.forwardRef<
         accept,
         isGenerating,
         error,
+        usingInitial,
         messages,
         isStreaming,
         isMac,
@@ -183,8 +185,8 @@ const MessageSuggestions = React.forwardRef<
           const keyNum = parseInt(event.key);
           if (!isNaN(keyNum) && keyNum > 0 && keyNum <= suggestions.length) {
             event.preventDefault();
-            const suggestionIndex = keyNum - 1;
-            void accept({ suggestion: suggestions[suggestionIndex] });
+            const s = suggestions[keyNum - 1];
+            setInputValue(s.detailedSuggestion || s.title);
           }
         }
       };
@@ -293,11 +295,20 @@ const MessageSuggestionsList = React.forwardRef<
   HTMLDivElement,
   MessageSuggestionsListProps
 >(({ className, ...props }, ref) => {
-  const { suggestions, selectedSuggestionId, accept, isGenerating, isMac } =
+  const { suggestions, selectedSuggestionId, isGenerating, isMac } =
     useMessageSuggestionsContext();
+  const { setValue } = useTamboThreadInput();
 
   const modKey = isMac ? "⌘" : "Ctrl";
   const altKey = isMac ? "⌥" : "Alt";
+
+  const handleSuggestionClick = React.useCallback(
+    (suggestion: Suggestion) => {
+      if (isGenerating) return;
+      setValue(suggestion.detailedSuggestion || suggestion.title);
+    },
+    [isGenerating, setValue],
+  );
 
   // Create placeholder suggestions when there are no real suggestions
   const placeholders = Array(3).fill(null);
@@ -333,9 +344,7 @@ const MessageSuggestionsList = React.forwardRef<
                     isSelected: selectedSuggestionId === suggestion.id,
                   }),
                 )}
-                onClick={async () =>
-                  !isGenerating && (await accept({ suggestion }))
-                }
+                onClick={() => handleSuggestionClick(suggestion)}
                 disabled={isGenerating}
                 data-suggestion-id={suggestion.id}
                 data-suggestion-index={index}
