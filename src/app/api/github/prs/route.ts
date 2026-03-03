@@ -1,37 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
+import { GITHUB_API, ghHeaders, withGitHubToken } from "@/lib/github-client";
+import { NextResponse } from "next/server";
 
-const GITHUB_API = "https://api.github.com";
-
-function headers(token: string) {
-  return {
-    Authorization: `Bearer ${token}`,
-    Accept: "application/vnd.github.v3+json",
-  };
+function resolvePrState(mergedAt: string | null | undefined, draft: boolean | undefined, rawState: string): string {
+  if (mergedAt) return "merged";
+  if (draft) return "draft";
+  return rawState;
 }
 
-export async function GET(request: NextRequest) {
-  const token = request.headers.get("x-github-token");
-  if (!token) {
-    return NextResponse.json(
-      { error: "GitHub token not provided" },
-      { status: 401 },
-    );
-  }
-
+export const GET = withGitHubToken(async (token, request) => {
   const { searchParams } = new URL(request.url);
-  const since =
-    searchParams.get("since") ||
-    new Date(Date.now() - 86400000).toISOString().split("T")[0];
-  const until = searchParams.get("until"); // optional end date YYYY-MM-DD
-  const repo = searchParams.get("repo");
   const owner = searchParams.get("owner");
+  const repo = searchParams.get("repo");
   const number = searchParams.get("number");
 
   // Single PR detail mode
   if (owner && repo && number) {
     const res = await fetch(
       `${GITHUB_API}/repos/${owner}/${repo}/pulls/${number}`,
-      { headers: headers(token) },
+      { headers: ghHeaders(token) },
     );
     if (!res.ok) {
       return NextResponse.json(
@@ -44,7 +30,7 @@ export async function GET(request: NextRequest) {
       number: pr.number,
       title: pr.title,
       body: pr.body,
-      state: pr.merged ? "merged" : pr.draft ? "draft" : pr.state,
+      state: resolvePrState(pr.merged_at, pr.draft, pr.state),
       url: pr.html_url,
       repo: `${owner}/${repo}`,
       additions: pr.additions,
@@ -65,24 +51,98 @@ export async function GET(request: NextRequest) {
     }, { headers: { "Cache-Control": "private, max-age=300" } });
   }
 
-  // List mode — search for PRs by author (defaults to current user)
+  // List mode — search for PRs by author, org, or current user
+  const since = searchParams.get("since");
+  const until = searchParams.get("until");
   const authorParam = searchParams.get("author");
+  const nameParam = searchParams.get("name");
+  const emailParam = searchParams.get("email");
+  const org = request.headers.get("x-github-org") || searchParams.get("org");
+  const repoParam = searchParams.get("repo");
+  // Qualify bare repo names (e.g. "tambo") with the configured org → "tambo-ai/tambo"
+  const repoFilter =
+    repoParam && !repoParam.includes("/") && org
+      ? `${org}/${repoParam}`
+      : repoParam;
+
   let login = authorParam;
-  if (!login) {
+
+  // Resolve name/email to GitHub username if no author provided
+  if (!login && (emailParam || nameParam)) {
+    const findRes = await fetch(
+      `${GITHUB_API}/search/users?q=${encodeURIComponent(
+        emailParam || nameParam || ""
+      )}${emailParam ? "+in:email" : ""}${org ? `+org:${encodeURIComponent(org)}` : ""}+type:user&per_page=1`,
+      { headers: ghHeaders(token) },
+    );
+    if (findRes.ok) {
+      const findData = await findRes.json();
+      if (findData.items?.[0]) {
+        login = findData.items[0].login;
+      }
+    }
+  }
+
+  // Only fall back to current user when no repo/org filter — allows "all PRs on repo" queries
+  if (!login && !repoFilter && !org) {
     const userRes = await fetch(`${GITHUB_API}/user`, {
-      headers: headers(token),
+      headers: ghHeaders(token),
     });
     const user = await userRes.json();
     login = user.login;
   }
 
-  const dateRange = until ? `${since}..${until}` : `>=${since}`;
-  let query = `author:${login} is:pr updated:${dateRange}`;
-  if (repo) query += ` repo:${repo}`;
+  // When we have a specific repo, use the pulls endpoint for accurate state (draft, merged)
+  if (repoFilter && repoFilter.includes("/")) {
+    const res = await fetch(
+      `${GITHUB_API}/repos/${repoFilter}/pulls?state=all&sort=updated&direction=desc&per_page=30`,
+      { headers: ghHeaders(token) },
+    );
+    const items: {
+      number: number;
+      title: string;
+      state: string;
+      html_url: string;
+      merged_at: string | null;
+      draft: boolean;
+      labels: { name: string; color: string }[];
+      created_at: string;
+      updated_at: string;
+      user: { login: string; avatar_url: string };
+    }[] = res.ok ? await res.json() : [];
+
+    const allPrs = items
+      .filter((pr) => !login || pr.user?.login === login)
+      .map((pr) => ({
+        number: pr.number,
+        title: pr.title,
+        state: resolvePrState(pr.merged_at, pr.draft, pr.state),
+        url: pr.html_url,
+        repo: repoFilter,
+        labels: (pr.labels || []).map((l) => ({ name: l.name, color: l.color })),
+        createdAt: pr.created_at,
+        updatedAt: pr.updated_at,
+        mergedAt: pr.merged_at ?? null,
+        author: pr.user?.login,
+        authorAvatar: pr.user?.avatar_url,
+      }));
+
+    return NextResponse.json(allPrs, { headers: { "Cache-Control": "private, max-age=120" } });
+  }
+
+  // Fallback: search API for cross-repo queries
+  let query = "is:pr";
+  if (login) query += ` author:${login}`;
+  if (since) {
+    const dateRange = until ? `${since}..${until}` : `>=${since}`;
+    query += ` updated:${dateRange}`;
+  }
+  if (repoFilter) query += ` repo:${repoFilter}`;
+  if (org && !repoFilter) query += ` org:${org}`;
 
   const searchRes = await fetch(
     `${GITHUB_API}/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc&per_page=20`,
-    { headers: headers(token) },
+    { headers: ghHeaders(token) },
   );
   const data = await searchRes.json();
 
@@ -101,17 +161,11 @@ export async function GET(request: NextRequest) {
       pull_request?: { merged_at: string | null };
     }) => {
       const repoPath = item.repository_url.split("/").slice(-2).join("/");
-      const isMerged = !!item.pull_request?.merged_at;
-
-      let state: string;
-      if (isMerged) state = "merged";
-      else if (item.draft) state = "draft";
-      else state = item.state;
 
       return {
         number: item.number,
         title: item.title,
-        state,
+        state: resolvePrState(item.pull_request?.merged_at, item.draft, item.state),
         url: item.html_url,
         repo: repoPath,
         labels: (item.labels || []).map((l) => ({
@@ -128,4 +182,4 @@ export async function GET(request: NextRequest) {
   );
 
   return NextResponse.json(prs, { headers: { "Cache-Control": "private, max-age=120" } });
-}
+});
