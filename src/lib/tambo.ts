@@ -1,9 +1,10 @@
-import { Graph, graphSchema } from "@/components/tambo/graph";
-import { TeamOverview, teamOverviewSchema } from "@/components/tambo/team-overview";
-import { PersonDetail, personDetailSchema } from "@/components/tambo/person-detail";
-import { WeeklyGoals, weeklyGoalsSchema } from "@/components/tambo/weekly-goals";
-import { RiskReport, riskReportSchema } from "@/components/tambo/risk-report";
-import { SummaryPanel, summaryPanelSchema } from "@/components/tambo/summary-panel";
+import { Graph, graphSchema } from "@/components/graph";
+import { TeamOverview, teamOverviewSchema } from "@/components/team-overview";
+import { PersonDetail, personDetailSchema } from "@/components/person-detail";
+import { PullRequestList, pullRequestListSchema } from "@/components/pull-request-list";
+import { WeeklyGoals, weeklyGoalsSchema } from "@/components/weekly-goals";
+import { RiskReport, riskReportSchema } from "@/components/risk-report";
+import { SummaryPanel, summaryPanelSchema } from "@/components/summary-panel";
 import { getTokenHeaders } from "@/lib/user-tokens";
 import type { TamboComponent, TamboTool } from "@tambo-ai/react";
 import { defineTool } from "@tambo-ai/react";
@@ -84,49 +85,6 @@ const findGitHubUser = defineTool({
   }),
 });
 
-const getMyPRs = defineTool({
-  name: "getMyPRs",
-  description:
-    "Get the current user's GitHub pull requests. The GitHub token owner is the current user — no username needed. Optionally filter by date range or repo. Use when the user asks about their own PRs, what they're working on, or their recent activity.",
-  tool: async ({ since, until, repo }) => {
-    const params = new URLSearchParams();
-    if (since) params.set("since", since);
-    if (until) params.set("until", until);
-    if (repo) params.set("repo", repo);
-    return apiFetch<{
-      number: number;
-      title: string;
-      state: string;
-      url: string;
-      repo: string;
-      createdAt: string;
-      updatedAt: string;
-      mergedAt: string | null;
-      author: string;
-      draft?: boolean;
-    }[]>(`/api/github/prs?${params}`);
-  },
-  inputSchema: z.object({
-    since: z.string().optional().describe("Start date YYYY-MM-DD (default: yesterday)"),
-    until: z.string().optional().describe("End date YYYY-MM-DD (optional)"),
-    repo: z.string().optional().describe("Filter to a specific repo (owner/name)"),
-  }),
-  outputSchema: z.array(
-    z.object({
-      number: z.number(),
-      title: z.string(),
-      state: z.string(),
-      url: z.string(),
-      repo: z.string(),
-      createdAt: z.string(),
-      updatedAt: z.string(),
-      mergedAt: z.string().nullable(),
-      author: z.string(),
-      draft: z.boolean().optional(),
-    }),
-  ),
-});
-
 const searchIssues = defineTool({
   name: "searchIssues",
   description:
@@ -169,7 +127,7 @@ const searchIssues = defineTool({
   ),
 });
 
-export const tools: TamboTool[] = [listTeams, getTeamMembers, findGitHubUser, getMyPRs, searchIssues];
+export const tools: TamboTool[] = [listTeams, getTeamMembers, findGitHubUser, searchIssues];
 
 export const components: TamboComponent[] = [
   {
@@ -189,9 +147,16 @@ export const components: TamboComponent[] = [
   {
     name: "PersonDetail",
     description:
-      "Detailed view of one person's Linear issues and GitHub PRs. ONLY pass their Linear user ID and name — the component fetches its own data. Optionally pass githubUsername for PR data and a short AI summary. Use when the user asks about a specific person.",
+      "Detailed view of one person's Linear issues and GitHub PRs. Pass their Linear user ID and name. If you know their GitHub username (from findGitHubUser), pass it as githubUsername — otherwise the component will resolve it automatically. Use when the user asks about a specific person.",
     component: PersonDetail,
     propsSchema: personDetailSchema,
+  },
+  {
+    name: "PullRequestList",
+    description:
+      "Shows GitHub pull requests for a repo, org, or author. The component fetches its own data — just pass the filters. Includes filter pills for state, repo, and author. Use when the user asks about PRs on a repo or org. Pass repo as just the name (e.g. 'tambo') or full slug ('tambo-ai/tambo').",
+    component: PullRequestList,
+    propsSchema: pullRequestListSchema,
   },
   {
     name: "WeeklyGoals",

@@ -91,7 +91,7 @@ export function SettingsModal({
   async function loadTeamMembers(teamId: string, active: boolean) {
     setMembersLoading(true);
     try {
-      const members = await fetchMembers(teamId);
+      const members = await fetchMembers(teamId, true);
       if (active) setTeamMembers(members);
     } catch {
       // ignore — member list is optional

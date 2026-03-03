@@ -1,54 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-
-const GITHUB_API = "https://api.github.com";
-
-function ghHeaders(token: string) {
-  return {
-    Authorization: `Bearer ${token}`,
-    Accept: "application/vnd.github.v3+json",
-  };
-}
-
-interface GHMember {
-  login: string;
-  avatar_url: string;
-}
-
-/** Fetch all members of a GitHub org (paginated). Cached per request. */
-async function fetchOrgMembers(org: string, token: string): Promise<GHMember[]> {
-  const members: GHMember[] = [];
-  let page = 1;
-  while (true) {
-    const res = await fetch(
-      `${GITHUB_API}/orgs/${encodeURIComponent(org)}/members?per_page=100&page=${page}`,
-      { headers: ghHeaders(token) },
-    );
-    if (!res.ok) break;
-    const batch: GHMember[] = await res.json();
-    if (!Array.isArray(batch) || batch.length === 0) break;
-    members.push(...batch);
-    if (batch.length < 100) break;
-    page++;
-  }
-  return members;
-}
-
-/** Fetch a user's profile to get their real name. */
-async function fetchUserName(login: string, token: string): Promise<string | null> {
-  const res = await fetch(`${GITHUB_API}/users/${encodeURIComponent(login)}`, {
-    headers: ghHeaders(token),
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.name || null;
-}
+import { GITHUB_API, ghHeaders, withGitHubToken } from "@/lib/github-client";
+import { NextResponse } from "next/server";
 
 /** Simple fuzzy name match: check if query words appear in target string. */
 function nameScore(query: string, target: string): number {
   const q = query.toLowerCase().trim();
   const t = target.toLowerCase().trim();
-  if (t === q) return 100; // exact match
-  if (t.includes(q)) return 80; // full substring
+  if (t === q) return 100;
+  if (t.includes(q)) return 80;
   const qWords = q.split(/\s+/);
   const tWords = t.split(/\s+/);
   let matched = 0;
@@ -59,12 +17,16 @@ function nameScore(query: string, target: string): number {
   return Math.round((matched / qWords.length) * 60);
 }
 
-export async function GET(request: NextRequest) {
-  const token = request.headers.get("x-github-token");
-  if (!token) {
-    return NextResponse.json({ error: "GitHub token not provided" }, { status: 401 });
-  }
+/** Map GitHub search user results to our shape. */
+function mapUsers(items: { login: string; avatar_url: string; name?: string }[]) {
+  return items.map((u) => ({
+    login: u.login,
+    avatar: u.avatar_url,
+    name: u.name,
+  }));
+}
 
+export const GET = withGitHubToken(async (token, request) => {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("email");
   const name = searchParams.get("name");
@@ -83,11 +45,7 @@ export async function GET(request: NextRequest) {
     if (res.ok) {
       const data = await res.json();
       if (data.items?.length > 0) {
-        const users = data.items.map((u: { login: string; avatar_url: string; name?: string }) => ({
-          login: u.login,
-          avatar: u.avatar_url,
-          name: u.name,
-        }));
+        const users = mapUsers(data.items);
         return NextResponse.json(
           { users, bestMatch: users[0].login, matchedBy: "email" },
           { headers: { "Cache-Control": "private, max-age=600" } },
@@ -96,33 +54,23 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Strategy 2: Org member matching by name (when org is configured)
+  // Strategy 2: Search within org by name (single API call, no N+1)
   if (name && org) {
-    const members = await fetchOrgMembers(org, token);
-    if (members.length > 0) {
-      // Fetch real names for all org members in parallel (batched)
-      const withNames = await Promise.all(
-        members.map(async (m) => {
-          const realName = await fetchUserName(m.login, token);
-          return { login: m.login, avatar: m.avatar_url, name: realName };
-        }),
-      );
+    const res = await fetch(
+      `${GITHUB_API}/search/users?q=${encodeURIComponent(name)}+org:${encodeURIComponent(org)}+type:user&per_page=5`,
+      { headers: ghHeaders(token) },
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data.items?.length > 0) {
+        const users = mapUsers(data.items);
+        // Score and rank by name relevance
+        users.sort((a, b) => {
+          const sa = Math.max(nameScore(name, a.name || ""), nameScore(name, a.login));
+          const sb = Math.max(nameScore(name, b.name || ""), nameScore(name, b.login));
+          return sb - sa;
+        });
 
-      // Score each member against the query name
-      const scored = withNames
-        .map((m) => ({
-          ...m,
-          score: Math.max(
-            nameScore(name, m.name || ""),
-            nameScore(name, m.login),
-          ),
-        }))
-        .filter((m) => m.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5);
-
-      if (scored.length > 0) {
-        const users = scored.map((m) => ({ login: m.login, avatar: m.avatar, name: m.name }));
         return NextResponse.json(
           { users, bestMatch: users[0].login, matchedBy: "org" as const },
           { headers: { "Cache-Control": "private, max-age=600" } },
@@ -140,11 +88,7 @@ export async function GET(request: NextRequest) {
     if (res.ok) {
       const data = await res.json();
       if (data.items?.length > 0) {
-        const users = data.items.map((u: { login: string; avatar_url: string; name?: string }) => ({
-          login: u.login,
-          avatar: u.avatar_url,
-          name: u.name,
-        }));
+        const users = mapUsers(data.items);
         return NextResponse.json(
           { users, bestMatch: users[0].login, matchedBy: "name" },
           { headers: { "Cache-Control": "private, max-age=600" } },
@@ -153,9 +97,8 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // No match found
   return NextResponse.json(
     { users: [], bestMatch: null, matchedBy: null },
     { headers: { "Cache-Control": "private, max-age=300" } },
   );
-}
+});

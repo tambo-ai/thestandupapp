@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useTambo } from "@tambo-ai/react";
+import { useTambo, useTamboThreadInput } from "@tambo-ai/react";
 import { X, GripVertical } from "lucide-react";
 import * as React from "react";
 
@@ -217,6 +217,16 @@ function layoutClass(count: number): string {
 }
 
 function EmptyCanvas() {
+  const { setValue, submit } = useTamboThreadInput();
+
+  const handleClick = React.useCallback(
+    (text: string) => {
+      setValue(text);
+      submit();
+    },
+    [setValue, submit],
+  );
+
   return (
     <div className="flex-1 h-full flex flex-col items-center justify-center p-8">
       <div className="text-center space-y-6 max-w-md">
@@ -235,9 +245,10 @@ function EmptyCanvas() {
             "What's at risk?",
             "What am I working on?",
           ].map((suggestion) => (
-            <span
+            <button
               key={suggestion}
-              className="text-[12px] px-3 py-1.5 rounded-full border cursor-default"
+              onClick={() => handleClick(suggestion)}
+              className="text-[12px] px-3 py-1.5 rounded-full border cursor-pointer transition-colors hover:bg-[rgba(0,0,0,0.03)]"
               style={{
                 color: "#888",
                 borderColor: "rgba(0,0,0,0.08)",
@@ -245,7 +256,7 @@ function EmptyCanvas() {
               }}
             >
               {suggestion}
-            </span>
+            </button>
           ))}
         </div>
       </div>

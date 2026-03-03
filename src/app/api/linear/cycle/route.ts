@@ -12,12 +12,10 @@ async function formatCycle(cycle: Cycle) {
 
   const items = await Promise.all(
     issuesConn.nodes.map(async (issue: Issue) => {
-      const state = await issue.state;
+      const [state, assignee] = await Promise.all([issue.state, issue.assignee]);
       let status: "done" | "in-progress" | "not-started" = "not-started";
       if (state?.type === "completed") status = "done";
       else if (state?.type === "started") status = "in-progress";
-
-      const assignee = await issue.assignee;
       const isAtRisk =
         status !== "done" &&
         ((issue.dueDate && new Date(issue.dueDate).getTime() < now) ||
