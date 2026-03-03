@@ -28,9 +28,8 @@ export function withGitHubToken(
     try {
       return await handler(token, request);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unknown error";
-      return NextResponse.json({ error: message }, { status: 500 });
+      console.error("GitHub route error", error);
+      return NextResponse.json({ error: "GitHub request failed" }, { status: 500 });
     }
   };
 }

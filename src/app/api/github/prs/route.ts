@@ -1,10 +1,13 @@
 import { GITHUB_API, ghHeaders, withGitHubToken } from "@/lib/github-client";
 import { NextResponse } from "next/server";
 
-function resolvePrState(mergedAt: string | null | undefined, draft: boolean | undefined, rawState: string): string {
+type PrState = "open" | "closed" | "merged" | "draft";
+
+function resolvePrState(mergedAt: string | null | undefined, draft: boolean | undefined, rawState: string): PrState {
   if (mergedAt) return "merged";
-  if (draft) return "draft";
-  return rawState;
+  if (draft && rawState === "open") return "draft";
+  if (rawState === "open" || rawState === "closed") return rawState;
+  return "closed";
 }
 
 export const GET = withGitHubToken(async (token, request) => {
@@ -60,10 +63,16 @@ export const GET = withGitHubToken(async (token, request) => {
   const org = request.headers.get("x-github-org") || searchParams.get("org");
   const repoParam = searchParams.get("repo");
   // Qualify bare repo names (e.g. "tambo") with the configured org → "tambo-ai/tambo"
-  const repoFilter =
-    repoParam && !repoParam.includes("/") && org
-      ? `${org}/${repoParam}`
-      : repoParam;
+  let repoFilter = repoParam;
+  if (repoParam && !repoParam.includes("/")) {
+    if (org) repoFilter = `${org}/${repoParam}`;
+    else {
+      return NextResponse.json(
+        { error: "repo must be in 'owner/name' form unless org is configured" },
+        { status: 400 },
+      );
+    }
+  }
 
   let login = authorParam;
 
@@ -95,7 +104,7 @@ export const GET = withGitHubToken(async (token, request) => {
   // When we have a specific repo, use the pulls endpoint for accurate state (draft, merged)
   if (repoFilter && repoFilter.includes("/")) {
     const res = await fetch(
-      `${GITHUB_API}/repos/${repoFilter}/pulls?state=all&sort=updated&direction=desc&per_page=30`,
+      `${GITHUB_API}/repos/${repoFilter}/pulls?state=all&sort=updated&direction=desc&per_page=100`,
       { headers: ghHeaders(token) },
     );
     const items: {
@@ -111,8 +120,18 @@ export const GET = withGitHubToken(async (token, request) => {
       user: { login: string; avatar_url: string };
     }[] = res.ok ? await res.json() : [];
 
+    const sinceMs = since ? Date.parse(`${since}T00:00:00Z`) : null;
+    const untilMs = until ? Date.parse(`${until}T23:59:59Z`) : null;
+
     const allPrs = items
       .filter((pr) => !login || pr.user?.login === login)
+      .filter((pr) => {
+        if (!sinceMs && !untilMs) return true;
+        const updated = Date.parse(pr.updated_at);
+        if (sinceMs && updated < sinceMs) return false;
+        if (untilMs && updated > untilMs) return false;
+        return true;
+      })
       .map((pr) => ({
         number: pr.number,
         title: pr.title,

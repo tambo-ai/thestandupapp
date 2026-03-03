@@ -65,15 +65,14 @@ export const GET = withGitHubToken(async (token, request) => {
       if (data.items?.length > 0) {
         const users = mapUsers(data.items);
         // Score and rank by name relevance
-        const scored = users
-          .map((u) => ({
-            ...u,
-            score: Math.max(nameScore(name, u.name || ""), nameScore(name, u.login)),
-          }))
-          .sort((a, b) => b.score - a.score);
+        users.sort((a, b) => {
+          const sa = Math.max(nameScore(name, a.name || ""), nameScore(name, a.login));
+          const sb = Math.max(nameScore(name, b.name || ""), nameScore(name, b.login));
+          return sb - sa;
+        });
 
         return NextResponse.json(
-          { users: scored, bestMatch: scored[0].login, matchedBy: "org" as const },
+          { users, bestMatch: users[0].login, matchedBy: "org" as const },
           { headers: { "Cache-Control": "private, max-age=600" } },
         );
       }
