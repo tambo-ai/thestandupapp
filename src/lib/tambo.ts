@@ -5,14 +5,12 @@ import { PullRequestList, pullRequestListSchema } from "@/components/pull-reques
 import { WeeklyGoals, weeklyGoalsSchema } from "@/components/weekly-goals";
 import { RiskReport, riskReportSchema } from "@/components/risk-report";
 import { SummaryPanel, summaryPanelSchema } from "@/components/summary-panel";
-import { getTokenHeaders } from "@/lib/user-tokens";
 import type { TamboComponent, TamboTool } from "@tambo-ai/react";
 import { defineTool } from "@tambo-ai/react";
 import { z } from "zod";
 
 async function apiFetch<T>(url: string): Promise<T> {
-  const headers = await getTokenHeaders();
-  const res = await fetch(url, { headers });
+  const res = await fetch(url);
   const json = await res.json();
   if (json.error) throw new Error(json.error);
   return json as T;

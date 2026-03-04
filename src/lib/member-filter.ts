@@ -1,15 +1,12 @@
 /**
  * Shared helpers for the member filter feature.
  *
- * - TeamMember: canonical type for a team member summary (used by settings modal,
- *   team overview, and filter resolution)
+ * - TeamMember: canonical type for a team member summary (used by
+ *   team overview, person detail, and filter resolution)
  * - fetchTeamMembers: single function for fetching the member list from the API
- * - resolveFilteredMemberNames: reads filter IDs from storage, fetches team, returns names
- * - useFilteredMemberIds: React hook returning the stored filter as a Set
+ * - resolveFilteredMemberNames: returns null (member filtering removed with old settings modal)
+ * - useFilteredMemberIds: returns null (member filtering removed with old settings modal)
  */
-
-import { useEffect, useState } from "react";
-import { getFilteredMembers, getTokenHeaders } from "./user-tokens";
 
 /** Member shape returned by /api/linear/team?id=X */
 export interface TeamMember {
@@ -25,14 +22,13 @@ export interface TeamMember {
 
 /**
  * Fetches team members from the Linear team API.
- * Attaches the user's encrypted auth headers automatically.
+ * Server handles authentication via session cookies.
  */
 export async function fetchTeamMembers(teamId: string, lite = false): Promise<TeamMember[]> {
-  const headers = await getTokenHeaders();
   const url = lite
     ? `/api/linear/team?id=${teamId}&lite=true`
     : `/api/linear/team?id=${teamId}`;
-  const res = await fetch(url, { headers });
+  const res = await fetch(url);
   const data = await res.json();
   if (data?.members && Array.isArray(data.members)) {
     return data.members;
@@ -41,33 +37,19 @@ export async function fetchTeamMembers(teamId: string, lite = false): Promise<Te
 }
 
 /**
- * Reads the stored filter IDs, fetches the team member list, and resolves
- * IDs to display names. Returns null if no filter is active.
+ * Returns null — member filtering was removed with the old settings modal.
+ * Kept for API compatibility until callers are cleaned up.
  */
-export async function resolveFilteredMemberNames(teamId: string): Promise<string[] | null> {
-  const ids = await getFilteredMembers();
-  if (!ids) return null;
-  try {
-    const members = await fetchTeamMembers(teamId);
-    const idSet = new Set(ids);
-    return members
-      .filter((m) => idSet.has(m.linearUserId))
-      .map((m) => m.name);
-  } catch {
-    return null;
-  }
+export async function resolveFilteredMemberNames(_teamId: string): Promise<string[] | null> {
+  // Member filtering removed — was tied to old settings modal token storage
+  return null;
 }
 
 /**
- * React hook that reads the filtered member IDs from localStorage on mount.
- * Returns a Set of IDs for fast lookup, or null if no filter is active.
+ * Returns null — member filtering was removed with the old settings modal.
+ * Kept for API compatibility until callers are cleaned up.
  */
 export function useFilteredMemberIds(): Set<string> | null {
-  const [filterIds, setFilterIds] = useState<Set<string> | null>(null);
-
-  useEffect(() => {
-    getFilteredMembers().then((ids) => setFilterIds(ids ? new Set(ids) : null));
-  }, []);
-
-  return filterIds;
+  // Member filtering removed — was tied to old settings modal token storage
+  return null;
 }

@@ -47,7 +47,7 @@ export function ConnectionsModal({ isOpen, onClose }: ConnectionsModalProps) {
         </div>
         <div className="px-5 pt-4 pb-5">
           <WorkOsWidgets>
-            <Pipes authToken={getAccessToken} />
+            <Pipes authToken={getAccessToken as () => Promise<string>} />
           </WorkOsWidgets>
         </div>
       </div>
