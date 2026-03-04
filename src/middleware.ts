@@ -196,7 +196,7 @@ export const config = {
   matcher: [
     '/',
     '/app/:path*',
-    '/api/auth/callback',
+    '/api/:path*',
     '/workos/logout',
   ],
 };
