@@ -4,6 +4,7 @@ import { CanvasSpace } from "@/components/tambo/canvas-space";
 import { ConnectionPrompt } from "@/components/connection-prompt";
 import { ConnectionsModal } from "@/components/connections-modal";
 import { MessageThreadFull } from "@/components/tambo/message-thread-full";
+import { TeamSwitcher } from "@/components/team-switcher";
 import { UserHeader } from "@/components/user-header";
 import { components, tools } from "@/lib/tambo";
 import type { InitialInputMessage } from "@tambo-ai/react";
@@ -17,7 +18,14 @@ interface Props {
   userImage?: string;
   userToken: string;
   activeTeamId?: string | null;
-  activeTeamName?: string | null;
+  teams: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    isPersonal: boolean;
+    workosOrgId: string | null;
+    role: "owner" | "member";
+  }>;
   connectionStatus?: { github: string; linear: string };
 }
 
@@ -64,11 +72,18 @@ General rules:
   };
 }
 
-export function AppShell({ userId, userName, userEmail, userImage, userToken, activeTeamId, activeTeamName, connectionStatus }: Props) {
-  const selectedTeam = React.useMemo(
-    () => (activeTeamId && activeTeamName ? { id: activeTeamId, name: activeTeamName } : null),
-    [activeTeamId, activeTeamName],
+export function AppShell({ userId, userName, userEmail, userImage, userToken, activeTeamId, teams, connectionStatus }: Props) {
+  const activeTeam = React.useMemo(
+    () => teams.find((t) => t.id === activeTeamId) ?? null,
+    [teams, activeTeamId],
   );
+
+  const selectedTeam = React.useMemo(
+    () => (activeTeam ? { id: activeTeam.id, name: activeTeam.name } : null),
+    [activeTeam],
+  );
+
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
 
   const systemPrompt = React.useMemo(
     () => buildSystemPrompt(userName, userEmail, selectedTeam),
@@ -203,6 +218,13 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
             userImage={userImage}
             connectionStatus={connStatus}
             onOpenModal={() => setModalOpen(true)}
+            teamSwitcherSlot={
+              <TeamSwitcher
+                teams={teams}
+                activeTeamId={activeTeamId ?? null}
+                onOpenSettings={() => setSettingsOpen(true)}
+              />
+            }
           />
           {hasNoConnections && (
             <ConnectionPrompt onOpenModal={() => setModalOpen(true)} />

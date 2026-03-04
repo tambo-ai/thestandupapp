@@ -1,6 +1,6 @@
 import { getWorkOS, withAuth } from "@workos-inc/authkit-nextjs";
 import { cookies } from "next/headers";
-import { db } from "@/lib/db";
+import { getFullDb } from "@/lib/db";
 import { AppShell } from "./app-shell";
 
 export default async function AppPage() {
@@ -10,12 +10,32 @@ export default async function AppPage() {
   const cookieStore = await cookies();
   const activeTeamId = cookieStore.get("active_team_id")?.value ?? null;
 
-  // Look up team name from DB when activeTeamId cookie is present
-  let activeTeamName: string | null = null;
-  if (activeTeamId) {
-    const team = await db.selectFrom('teams').where('id', '=', activeTeamId).select('name').executeTakeFirst();
-    activeTeamName = team?.name ?? null;
-  }
+  // Query all teams the user belongs to (with role)
+  const fullDb = getFullDb();
+  const userTeams = await fullDb
+    .selectFrom('teams')
+    .innerJoin('memberships', 'memberships.team_id', 'teams.id')
+    .where('memberships.user_id', '=', user.id)
+    .select([
+      'teams.id',
+      'teams.name',
+      'teams.slug',
+      'teams.is_personal',
+      'teams.workos_organization_id',
+      'memberships.role',
+    ])
+    .orderBy('teams.is_personal', 'desc')
+    .orderBy('teams.name', 'asc')
+    .execute();
+
+  const mappedTeams = userTeams.map((t) => ({
+    id: t.id,
+    name: t.name,
+    slug: t.slug,
+    isPersonal: t.is_personal === 1,
+    workosOrgId: t.workos_organization_id,
+    role: t.role as 'owner' | 'member',
+  }));
 
   // Check connection status for both providers server-side via WorkOS Pipes
   const workos = getWorkOS();
@@ -50,7 +70,7 @@ export default async function AppPage() {
       userImage={user.profilePictureUrl ?? undefined}
       userToken={accessToken}
       activeTeamId={activeTeamId}
-      activeTeamName={activeTeamName}
+      teams={mappedTeams}
       connectionStatus={connectionStatus}
     />
   );

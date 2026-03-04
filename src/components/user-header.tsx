@@ -2,6 +2,7 @@
 
 import { logout } from "@/lib/auth-actions";
 import { Settings, LogOut } from "lucide-react";
+import * as React from "react";
 
 function dotColor(status: string): string {
   if (status === "connected") return "#22C55E";
@@ -21,17 +22,28 @@ export function UserHeader({
   userImage,
   connectionStatus,
   onOpenModal,
+  teamSwitcherSlot,
 }: {
   userName: string;
   userImage?: string;
   connectionStatus: { github: string; linear: string };
   onOpenModal: () => void;
+  teamSwitcherSlot?: React.ReactNode;
 }) {
   return (
     <div
       className="flex items-center gap-2 px-4 py-2 border-b"
       style={{ borderColor: "rgba(0,0,0,0.06)" }}
     >
+      {teamSwitcherSlot}
+
+      {teamSwitcherSlot && (
+        <div
+          className="h-4 w-px shrink-0"
+          style={{ background: "rgba(0,0,0,0.08)" }}
+        />
+      )}
+
       {userImage ? (
         <img
           src={userImage}
