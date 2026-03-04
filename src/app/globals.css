@@ -83,6 +83,11 @@
   }
 }
 
+/* Fix: Radix UI Inset overflow clips WorkOS Pipes dropdown menus (UAT test 7) */
+.rt-Inset {
+  overflow: visible !important;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 4px;

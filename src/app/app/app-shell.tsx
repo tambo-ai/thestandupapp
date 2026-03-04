@@ -80,20 +80,69 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
     connectionStatus ?? { github: "not_installed", linear: "not_installed" },
   );
 
-  const refreshConnectionStatus = React.useCallback(async () => {
-    try {
-      const res = await fetch("/api/connections/status");
-      const data = await res.json();
-      setConnStatus(data);
-    } catch {
-      /* ignore */
+  // Track latest connStatus in a ref so pollConnectionStatus can compare
+  // against the pre-poll baseline without re-creating on every state change.
+  const connStatusRef = React.useRef(connStatus);
+  React.useEffect(() => {
+    connStatusRef.current = connStatus;
+  }, [connStatus]);
+
+  const pollAbortRef = React.useRef<AbortController | null>(null);
+
+  const pollConnectionStatus = React.useCallback(async () => {
+    // Cancel any previous poll in progress
+    pollAbortRef.current?.abort();
+    const controller = new AbortController();
+    pollAbortRef.current = controller;
+
+    const baseline = connStatusRef.current;
+    const delays = [500, 1000, 2000, 2000, 2000, 2000];
+    let lastData: { github: string; linear: string } | null = null;
+
+    for (const delay of delays) {
+      if (controller.signal.aborted) return;
+      await new Promise((r) => setTimeout(r, delay));
+      if (controller.signal.aborted) return;
+
+      try {
+        const res = await fetch("/api/connections/status", {
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        lastData = data;
+
+        // Stop early if any provider changed status
+        if (
+          data.github !== baseline.github ||
+          data.linear !== baseline.linear
+        ) {
+          setConnStatus(data);
+          return;
+        }
+      } catch {
+        if (controller.signal.aborted) return;
+        // Network error — continue polling
+      }
     }
+
+    // Exhausted all attempts — update with latest result anyway
+    if (lastData) {
+      setConnStatus(lastData);
+    }
+  }, []);
+
+  // Cleanup polling on unmount
+  React.useEffect(() => {
+    return () => {
+      pollAbortRef.current?.abort();
+    };
   }, []);
 
   const handleModalClose = React.useCallback(() => {
     setModalOpen(false);
-    refreshConnectionStatus();
-  }, [refreshConnectionStatus]);
+    // Fire and forget — modal closes immediately, polling happens in background
+    pollConnectionStatus();
+  }, [pollConnectionStatus]);
 
   const hasNoConnections =
     connStatus.github !== "connected" && connStatus.linear !== "connected";
