@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: WorkOS Auth Migration** - Replace Better Auth with WorkOS AuthKit for login, sessions, and middleware
 - [ ] **Phase 2: Multi-Tenant DB Schema** - Extend Turso with users, teams, memberships, and invitations tables
-- [ ] **Phase 3: WorkOS Pipes Connections** - Replace localStorage token storage with WorkOS Pipes for GitHub and Linear
+- [x] **Phase 3: WorkOS Pipes Connections** - Replace localStorage token storage with WorkOS Pipes for GitHub and Linear (completed 2026-03-04)
 - [ ] **Phase 4: Team Formation** - Create teams, invite members, and join via link or email
 - [ ] **Phase 5: Team Owner Controls** - Member management, invitation management, and leave/remove flows
 - [ ] **Phase 6: Team-Scoped AI Tools** - AI queries across all team members' connections for cross-team standup answers
@@ -67,12 +67,12 @@ Plans:
   6. A new user who has not connected any accounts sees a prompt directing them to the connections page
   7. No OAuth tokens appear in localStorage, client state, or API response bodies — server only
   8. The user-tokens.ts file and all encrypted localStorage token patterns are deleted from the codebase
-**Plans:** 4 plans
+**Plans:** 4/4 plans complete
 Plans:
 - [x] 03-01-PLAN.md — Install Pipes dependencies, replace header-based token wrappers with server-side Pipes retrieval, create connection status API, update page.tsx
 - [x] 03-02-PLAN.md — Create connections modal with Pipes widget, add status dots to UserHeader, create onboarding prompt, wire into AppShell
 - [x] 03-03-PLAN.md — Delete user-tokens.ts and settings-modal.tsx, remove all getTokenHeaders imports, simplify to plain fetch
-- [ ] 03-04-PLAN.md — UAT gap closure: Fix connection status polling with retry, CSS overflow for Pipes dropdown, diagnostic logging for token retrieval
+- [x] 03-04-PLAN.md — UAT gap closure: Fix connection status polling with retry, CSS overflow for Pipes dropdown, diagnostic logging for token retrieval
 
 ### Phase 4: Team Formation
 **Goal**: Users can create a team workspace, invite teammates by email or shareable link, and join a team — establishing the multi-tenant group structure needed for shared AI queries
@@ -143,7 +143,7 @@ Note: Phase 3 (Pipes) and Phase 4 (Team Formation) both depend on Phase 2 but no
 |-------|----------------|--------|-----------|
 | 1. WorkOS Auth Migration | 2/2 | Complete | 2026-03-04 |
 | 2. Multi-Tenant DB Schema | 3/4 | UAT gap closure | - |
-| 3. WorkOS Pipes Connections | 3/4 | UAT gap closure | - |
+| 3. WorkOS Pipes Connections | 4/4 | Complete   | 2026-03-04 |
 | 4. Team Formation | 0/? | Not started | - |
 | 5. Team Owner Controls | 0/? | Not started | - |
 | 6. Team-Scoped AI Tools | 0/? | Not started | - |
