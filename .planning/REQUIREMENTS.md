@@ -11,9 +11,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **AUTH-01**: User can sign up and sign in via WorkOS AuthKit (replaces Better Auth)
 - [x] **AUTH-02**: User session persists across browser refreshes via WorkOS session management
-- [ ] **AUTH-03**: User can log out from any page
+- [x] **AUTH-03**: User can log out from any page
 - [x] **AUTH-04**: User is redirected to intended destination after login
-- [ ] **AUTH-05**: Better Auth is fully removed from the codebase
+- [x] **AUTH-05**: Better Auth is fully removed from the codebase
 
 ### Connections
 
@@ -105,9 +105,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | AUTH-01 | Phase 1 | Complete |
 | AUTH-02 | Phase 1 | Complete |
-| AUTH-03 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Complete |
 | AUTH-04 | Phase 1 | Complete |
-| AUTH-05 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Complete |
 | CONN-01 | Phase 3 | Pending |
 | CONN-02 | Phase 3 | Pending |
 | CONN-03 | Phase 3 | Pending |

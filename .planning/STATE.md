@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-03-04T01:46:00Z"
-last_activity: 2026-03-04 — Completed Plan 01-01 WorkOS Auth Infrastructure
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-03-04T02:15:00Z"
+last_activity: 2026-03-04 — Completed Plan 01-02 Route Restructure and Better Auth Removal
 progress:
   total_phases: 8
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 6
+  completed_plans: 2
+  percent: 13
 ---
 
 # Project State
@@ -25,28 +25,28 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 
 ## Current Position
 
-Phase: 1 of 8 (WorkOS Auth Migration)
-Plan: 1 of 2 in current phase
+Phase: 1 of 8 (WorkOS Auth Migration) -- COMPLETE
+Plan: 2 of 2 in current phase (phase complete)
 Status: Executing
-Last activity: 2026-03-04 — Completed Plan 01-01 WorkOS Auth Infrastructure
+Last activity: 2026-03-04 — Completed Plan 01-02 Route Restructure and Better Auth Removal
 
-Progress: [█░░░░░░░░░] 6%
+Progress: [██░░░░░░░░] 13%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 2min
-- Total execution time: 2min
+- Total plans completed: 2
+- Average duration: ~9min
+- Total execution time: ~17min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-workos-auth-migration | 1 | 2min | 2min |
+| 01-workos-auth-migration | 2 | ~17min | ~9min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2min)
+- Last 5 plans: 01-01 (2min), 01-02 (~15min)
 - Trend: Starting
 
 *Updated after each plan completion*
@@ -58,6 +58,8 @@ Progress: [█░░░░░░░░░] 6%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [01-02]: Simplified signOut() to use no arguments -- logout redirect URL configured in WorkOS dashboard instead of code
+- [01-02]: Added /workos/logout to middleware matcher for WorkOS logout redirect to pass through
 - [01-01]: Used explicit route matchers instead of catch-all regex to avoid breaking Tailwind CSS v4 static asset requests
 - [01-01]: Removed old Better Auth catch-all route [...all] as part of clean-break migration
 - [Roadmap]: WorkOS AuthKit fully replaces Better Auth — clean-break migration, no compatibility shim
@@ -77,6 +79,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T01:46:00Z
-Stopped at: Completed 01-01-PLAN.md
-Resume file: .planning/phases/01-workos-auth-migration/01-01-SUMMARY.md
+Last session: 2026-03-04T02:15:00Z
+Stopped at: Completed 01-02-PLAN.md (Phase 1 complete)
+Resume file: .planning/phases/01-workos-auth-migration/01-02-SUMMARY.md

@@ -12,7 +12,7 @@ This milestone transforms the existing single-user Tambo AI standup app into a m
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: WorkOS Auth Migration** - Replace Better Auth with WorkOS AuthKit for login, sessions, and middleware
+- [x] **Phase 1: WorkOS Auth Migration** - Replace Better Auth with WorkOS AuthKit for login, sessions, and middleware
 - [ ] **Phase 2: Multi-Tenant DB Schema** - Extend Turso with users, teams, memberships, and invitations tables
 - [ ] **Phase 3: WorkOS Pipes Connections** - Replace localStorage token storage with WorkOS Pipes for GitHub and Linear
 - [ ] **Phase 4: Team Formation** - Create teams, invite members, and join via link or email
@@ -35,8 +35,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. No references to better-auth remain in package.json, source files, or environment config
 **Plans:** 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Install WorkOS AuthKit, replace middleware, create callback route and signOut action, add AuthKitProvider
-- [ ] 01-02-PLAN.md — Restructure routes (landing at /, app at /app), extract AppShell, update UserHeader, remove all Better Auth code
+- [x] 01-01-PLAN.md — Install WorkOS AuthKit, replace middleware, create callback route and signOut action, add AuthKitProvider
+- [x] 01-02-PLAN.md — Restructure routes (landing at /, app at /app), extract AppShell, update UserHeader, remove all Better Auth code
 
 ### Phase 2: Multi-Tenant DB Schema
 **Goal**: The Turso database has a multi-tenant schema that stores users, teams, memberships, and invitations, with all queries tenant-scoped so no data leaks across teams
@@ -131,7 +131,7 @@ Note: Phase 3 (Pipes) and Phase 4 (Team Formation) both depend on Phase 2 but no
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. WorkOS Auth Migration | 0/2 | Planning complete | - |
+| 1. WorkOS Auth Migration | 2/2 | Complete | 2026-03-04 |
 | 2. Multi-Tenant DB Schema | 0/? | Not started | - |
 | 3. WorkOS Pipes Connections | 0/? | Not started | - |
 | 4. Team Formation | 0/? | Not started | - |
