@@ -49,7 +49,7 @@ Plans:
   4. Auth callback upserts a user row on first login without error
 **Plans:** 2 plans
 Plans:
-- [ ] 02-01-PLAN.md — Create schema types, dual database accessor (db + teamDb), migration files, migration runner, and schema verification script
+- [x] 02-01-PLAN.md — Create schema types, dual database accessor (db + teamDb), migration files, migration runner, and schema verification script
 - [ ] 02-02-PLAN.md — Extend auth callback with user upsert and personal team creation, add middleware user sync with staleness check, team cookie management, and tenant scoping verification tests
 
 ### Phase 3: WorkOS Pipes Connections
