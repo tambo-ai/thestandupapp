@@ -7,7 +7,7 @@ const STALE_MINUTES = 5;
 
 const middlewareAuthConfig = {
   enabled: true,
-  unauthenticatedPaths: ['/', '/api/auth/callback'],
+  unauthenticatedPaths: ['/', '/api/auth/callback', '/invite'],
 };
 
 export default async function middleware(request: NextRequest) {
@@ -18,7 +18,9 @@ export default async function middleware(request: NextRequest) {
 
   // Handle unauthenticated users on protected routes
   const isProtected = !middlewareAuthConfig.unauthenticatedPaths.some(
-    (path) => request.nextUrl.pathname === path,
+    (path) =>
+      request.nextUrl.pathname === path ||
+      request.nextUrl.pathname.startsWith(path + '/'),
   );
 
   if (middlewareAuthConfig.enabled && isProtected && !session.user) {
@@ -198,5 +200,6 @@ export const config = {
     '/app/:path*',
     '/api/:path*',
     '/workos/logout',
+    '/invite/:path*',
   ],
 };
