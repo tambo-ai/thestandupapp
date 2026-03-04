@@ -146,6 +146,7 @@ export default async function middleware(request: NextRequest) {
 
     // 7. Validate active_team_id cookie
     const activeTeamId = request.cookies.get('active_team_id')?.value;
+    let hasValidActiveTeam = false;
 
     if (activeTeamId) {
       // Verify user has membership in this team
@@ -156,15 +157,17 @@ export default async function middleware(request: NextRequest) {
         .select('memberships.id')
         .executeTakeFirst();
 
-      if (!membership) {
+      if (membership) {
+        hasValidActiveTeam = true;
+      } else {
         // Clear invalid cookie
         response.cookies.delete('active_team_id');
       }
     }
 
     // 8. Auto-select single team: if no valid active_team_id cookie
-    const currentActiveTeam = request.cookies.get('active_team_id')?.value;
-    if (!currentActiveTeam) {
+    // Use hasValidActiveTeam (not request.cookies) to detect deletion from step 7
+    if (!hasValidActiveTeam) {
       const userTeams = await fullDb
         .selectFrom('memberships')
         .where('memberships.user_id', '=', user.id)
