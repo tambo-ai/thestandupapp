@@ -84,7 +84,7 @@ Plans:
   3. Team owner can generate a shareable invite link that grants access when visited
   4. Invited user can click the link (email or shareable), complete sign-in if needed, and land in the team workspace
   5. Any team member can view the list of all current members in the workspace
-**Plans:** 4 plans (sequential waves 1→2→3→4)
+**Plans:** 2/4 plans executed
 Plans:
 - [ ] 04-01-PLAN.md — W1: Migration for workos_organization_id, schema update, switchTeam/joinTeam/setPendingInvite server actions, middleware invite route
 - [ ] 04-02-PLAN.md — W2: API routes for team create, switch, members, invite-link, invite-email, and join
@@ -149,7 +149,7 @@ Note: Phase 3 (Pipes) and Phase 4 (Team Formation) both depend on Phase 2 but no
 | 1. WorkOS Auth Migration | 2/2 | Complete | 2026-03-04 |
 | 2. Multi-Tenant DB Schema | 3/4 | UAT gap closure | - |
 | 3. WorkOS Pipes Connections | 4/4 | Complete   | 2026-03-04 |
-| 4. Team Formation | 0/4 | Planned | - |
+| 4. Team Formation | 2/4 | In Progress|  |
 | 5. Team Owner Controls | 0/? | Not started | - |
 | 6. Team-Scoped AI Tools | 0/? | Not started | - |
 | 7. Live Standup Sessions | 0/? | Not started | - |

@@ -29,10 +29,10 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Team Management
 
 - [x] **TEAM-01**: User can create a new team (workspace) which creates a WorkOS Organization
-- [ ] **TEAM-02**: User can invite team members via email (WorkOS Invitations API)
-- [ ] **TEAM-03**: User can invite team members via shareable invite link
+- [x] **TEAM-02**: User can invite team members via email (WorkOS Invitations API)
+- [x] **TEAM-03**: User can invite team members via shareable invite link
 - [x] **TEAM-04**: Invited user can accept invitation and join the team
-- [ ] **TEAM-05**: User can view all team members
+- [x] **TEAM-05**: User can view all team members
 - [ ] **TEAM-06**: User can leave a team
 - [ ] **TEAM-07**: Workspace owner can remove a team member
 - [ ] **TEAM-08**: Workspace owner can view pending invitations
@@ -117,10 +117,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONN-07 | Phase 3 | Complete |
 | CONN-08 | Phase 3 | Complete |
 | TEAM-01 | Phase 4 | Complete |
-| TEAM-02 | Phase 4 | Pending |
-| TEAM-03 | Phase 4 | Pending |
+| TEAM-02 | Phase 4 | Complete |
+| TEAM-03 | Phase 4 | Complete |
 | TEAM-04 | Phase 4 | Complete |
-| TEAM-05 | Phase 4 | Pending |
+| TEAM-05 | Phase 4 | Complete |
 | TEAM-06 | Phase 5 | Pending |
 | TEAM-07 | Phase 5 | Pending |
 | TEAM-08 | Phase 5 | Pending |
