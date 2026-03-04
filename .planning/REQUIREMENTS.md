@@ -41,7 +41,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Database
 
 - [x] **DATA-01**: Multi-tenant schema with users, teams, memberships, and connection references in Turso
-- [ ] **DATA-02**: All multi-tenant queries are scoped by team ID (no cross-tenant data leaks)
+- [x] **DATA-02**: All multi-tenant queries are scoped by team ID (no cross-tenant data leaks)
 - [x] **DATA-03**: User record stores WorkOS user ID as primary identifier
 
 ### Cross-Team AI
@@ -126,7 +126,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEAM-08 | Phase 5 | Pending |
 | TEAM-09 | Phase 5 | Pending |
 | DATA-01 | Phase 2 | Complete |
-| DATA-02 | Phase 2 | Pending |
+| DATA-02 | Phase 2 | Complete |
 | DATA-03 | Phase 2 | Complete |
 | AI-01 | Phase 6 | Pending |
 | AI-02 | Phase 6 | Pending |
