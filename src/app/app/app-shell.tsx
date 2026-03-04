@@ -16,6 +16,7 @@ interface Props {
   userEmail: string;
   userImage?: string;
   userToken: string;
+  activeTeamId?: string | null;
 }
 
 function buildSystemPrompt(userName: string, userEmail: string, selectedTeam?: { id: string; name: string } | null, filteredMemberNames?: string[] | null): InitialInputMessage {
@@ -62,7 +63,7 @@ ${filteredMemberNames && filteredMemberNames.length > 0 ? `- The user has filter
   };
 }
 
-export function AppShell({ userId, userName, userEmail, userImage, userToken }: Props) {
+export function AppShell({ userId, userName, userEmail, userImage, userToken, activeTeamId }: Props) {
   const [selectedTeam, setSelectedTeam] = React.useState<{ id: string; name: string } | null>(null);
   const [filteredMemberNames, setFilteredMemberNames] = React.useState<string[] | null>(null);
 
