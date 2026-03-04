@@ -5,7 +5,6 @@ import { MessageThreadFull } from "@/components/tambo/message-thread-full";
 import { UserHeader } from "@/components/user-header";
 import { components, tools } from "@/lib/tambo";
 import { resolveFilteredMemberNames } from "@/lib/member-filter";
-import { getSelectedTeam, setTokenUserId } from "@/lib/user-tokens";
 import type { InitialInputMessage } from "@tambo-ai/react";
 import { TamboProvider } from "@tambo-ai/react";
 import * as React from "react";
@@ -17,6 +16,7 @@ interface Props {
   userImage?: string;
   userToken: string;
   activeTeamId?: string | null;
+  activeTeamName?: string | null;
 }
 
 function buildSystemPrompt(userName: string, userEmail: string, selectedTeam?: { id: string; name: string } | null, filteredMemberNames?: string[] | null): InitialInputMessage {
@@ -63,24 +63,20 @@ ${filteredMemberNames && filteredMemberNames.length > 0 ? `- The user has filter
   };
 }
 
-export function AppShell({ userId, userName, userEmail, userImage, userToken, activeTeamId }: Props) {
-  const [selectedTeam, setSelectedTeam] = React.useState<{ id: string; name: string } | null>(null);
+export function AppShell({ userId, userName, userEmail, userImage, userToken, activeTeamId, activeTeamName }: Props) {
+  const selectedTeam = React.useMemo(
+    () => (activeTeamId && activeTeamName ? { id: activeTeamId, name: activeTeamName } : null),
+    [activeTeamId, activeTeamName],
+  );
   const [filteredMemberNames, setFilteredMemberNames] = React.useState<string[] | null>(null);
 
   React.useEffect(() => {
-    if (userId) {
-      setTokenUserId(userId).then(async () => {
-        const team = await getSelectedTeam();
-        setSelectedTeam(team);
-        if (team) {
-          const names = await resolveFilteredMemberNames(team.id);
-          setFilteredMemberNames(names);
-        } else {
-          setFilteredMemberNames(null);
-        }
-      });
+    if (activeTeamId) {
+      resolveFilteredMemberNames(activeTeamId).then(setFilteredMemberNames);
+    } else {
+      setFilteredMemberNames(null);
     }
-  }, [userId]);
+  }, [activeTeamId]);
 
   const systemPrompt = React.useMemo(
     () => buildSystemPrompt(userName, userEmail, selectedTeam, filteredMemberNames),
