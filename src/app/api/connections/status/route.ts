@@ -26,6 +26,9 @@ export async function GET() {
       ),
   ]);
 
+  // Diagnostic logging for UAT test 10 — logs full getAccessToken results
+  console.log('[connections/status]', { userId: user.id, github, linear });
+
   return NextResponse.json({
     github: github.active
       ? "connected"

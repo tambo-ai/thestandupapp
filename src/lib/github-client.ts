@@ -43,6 +43,9 @@ export function withGitHubToken(
       userId: user.id,
     });
 
+    // Diagnostic logging for UAT test 10
+    console.log('[withGitHubToken]', { userId: user.id, active: result.active, error: !result.active ? (result as unknown as Record<string, unknown>).error : undefined });
+
     if (!result.active) {
       return NextResponse.json(
         { error: "GitHub not connected", code: result.error },
