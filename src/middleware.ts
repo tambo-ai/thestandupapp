@@ -12,5 +12,6 @@ export const config = {
     '/',
     '/app/:path*',
     '/api/auth/callback',
+    '/workos/logout',
   ],
 };
