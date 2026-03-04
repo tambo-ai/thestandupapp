@@ -16,14 +16,12 @@ export function withLinearClient(
   ) => Promise<NextResponse>,
 ) {
   return async (request: NextRequest) => {
-    const { user } = await withAuth({ ensureSignedIn: true });
+    const { user, organizationId } = await withAuth({ ensureSignedIn: true });
     const result = await getWorkOS().pipes.getAccessToken({
       provider: "linear",
       userId: user.id,
+      ...(organizationId ? { organizationId } : {}),
     });
-
-    // Diagnostic logging for UAT test 10
-    console.log('[withLinearClient]', { userId: user.id, active: result.active, error: !result.active ? (result as unknown as Record<string, unknown>).error : undefined });
 
     if (!result.active) {
       return NextResponse.json(

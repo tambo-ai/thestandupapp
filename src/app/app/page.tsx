@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { AppShell } from "./app-shell";
 
 export default async function AppPage() {
-  const { user, accessToken } = await withAuth({ ensureSignedIn: true });
+  const { user, organizationId, accessToken } = await withAuth({ ensureSignedIn: true });
 
   // Read active team from cookie (set by auth callback or middleware)
   const cookieStore = await cookies();
@@ -19,12 +19,17 @@ export default async function AppPage() {
 
   // Check connection status for both providers server-side via WorkOS Pipes
   const workos = getWorkOS();
+  const pipeOpts = (provider: string) => ({
+    provider,
+    userId: user.id,
+    ...(organizationId ? { organizationId } : {}),
+  });
   const [ghResult, linearResult] = await Promise.all([
     workos.pipes
-      .getAccessToken({ provider: "github", userId: user.id })
+      .getAccessToken(pipeOpts("github"))
       .catch(() => ({ active: false as const, error: "not_installed" as const })),
     workos.pipes
-      .getAccessToken({ provider: "linear", userId: user.id })
+      .getAccessToken(pipeOpts("linear"))
       .catch(() => ({ active: false as const, error: "not_installed" as const })),
   ]);
 

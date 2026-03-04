@@ -2,12 +2,18 @@ import { getWorkOS, withAuth } from "@workos-inc/authkit-nextjs";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const { user } = await withAuth({ ensureSignedIn: true });
+  const { user, organizationId } = await withAuth({ ensureSignedIn: true });
   const workos = getWorkOS();
+
+  const pipeOpts = (provider: string) => ({
+    provider,
+    userId: user.id,
+    ...(organizationId ? { organizationId } : {}),
+  });
 
   const [github, linear] = await Promise.all([
     workos.pipes
-      .getAccessToken({ provider: "github", userId: user.id })
+      .getAccessToken(pipeOpts("github"))
       .catch(
         () =>
           ({ active: false, error: "not_installed" }) as {
@@ -16,7 +22,7 @@ export async function GET() {
           },
       ),
     workos.pipes
-      .getAccessToken({ provider: "linear", userId: user.id })
+      .getAccessToken(pipeOpts("linear"))
       .catch(
         () =>
           ({ active: false, error: "not_installed" }) as {
@@ -25,9 +31,6 @@ export async function GET() {
           },
       ),
   ]);
-
-  // Diagnostic logging for UAT test 10 — logs full getAccessToken results
-  console.log('[connections/status]', { userId: user.id, github, linear });
 
   return NextResponse.json({
     github: github.active
