@@ -83,9 +83,22 @@
   }
 }
 
-/* Fix: Radix UI Inset overflow clips WorkOS Pipes dropdown menus (UAT test 7) */
-.rt-Inset {
-  overflow: visible !important;
+/* Fix: WorkOS widget root uses block-size:100% which stretches the modal card */
+.connections-modal-card,
+.connections-modal-card .woswidgets-root,
+.connections-modal-card .radix-themes,
+.connections-modal-card .rt-Theme {
+  height: auto !important;
+  block-size: auto !important;
+  min-height: 0 !important;
+}
+
+/* Fix: WorkOS widget portals (dropdowns, dialogs) must render above our z-50 modal */
+[data-radix-popper-content-wrapper],
+.rt-DialogOverlay,
+.rt-AlertDialogOverlay,
+.rt-BaseDialogOverlay {
+  z-index: 100 !important;
 }
 
 /* Scrollbar */

@@ -33,7 +33,7 @@ export function ConnectionsModal({ isOpen, onClose }: ConnectionsModalProps) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl max-w-[420px] w-full mx-4 border border-[rgba(0,0,0,0.06)]">
+      <div className="connections-modal-card bg-white rounded-2xl shadow-2xl max-w-[420px] w-full mx-4 border border-[rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-between px-5 pt-5 pb-0">
           <h2 className="text-[15px] font-semibold text-[#1A1A1A]">
             Connect your accounts
