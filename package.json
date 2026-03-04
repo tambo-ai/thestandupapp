@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
+    "db:migrate": "npx tsx scripts/migrate.ts",
+    "db:verify": "npx tsx scripts/verify-schema.ts",
     "init": "npx tambo init"
   },
   "dependencies": {

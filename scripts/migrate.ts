@@ -1,3 +1,10 @@
+// Load .env.local for standalone script execution (Next.js does this automatically, tsx does not)
+try {
+  process.loadEnvFile('.env.local');
+} catch {
+  // Ignore — env vars may already be set (e.g., CI, --env-file flag)
+}
+
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Kysely, Migrator, FileMigrationProvider, sql } from "kysely";

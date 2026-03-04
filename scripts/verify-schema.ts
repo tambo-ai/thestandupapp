@@ -1,3 +1,10 @@
+// Load .env.local for standalone script execution (Next.js does this automatically, tsx does not)
+try {
+  process.loadEnvFile('.env.local');
+} catch {
+  // Ignore — env vars may already be set (e.g., CI, --env-file flag)
+}
+
 import { Kysely, sql } from "kysely";
 import { LibsqlDialect } from "@libsql/kysely-libsql";
 
