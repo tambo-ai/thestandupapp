@@ -13,7 +13,7 @@ This milestone transforms the existing single-user Tambo AI standup app into a m
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: WorkOS Auth Migration** - Replace Better Auth with WorkOS AuthKit for login, sessions, and middleware
-- [x] **Phase 2: Multi-Tenant DB Schema** - Extend Turso with users, teams, memberships, and invitations tables
+- [ ] **Phase 2: Multi-Tenant DB Schema** - Extend Turso with users, teams, memberships, and invitations tables
 - [ ] **Phase 3: WorkOS Pipes Connections** - Replace localStorage token storage with WorkOS Pipes for GitHub and Linear
 - [ ] **Phase 4: Team Formation** - Create teams, invite members, and join via link or email
 - [ ] **Phase 5: Team Owner Controls** - Member management, invitation management, and leave/remove flows
@@ -47,10 +47,11 @@ Plans:
   2. User record is keyed on WorkOS user ID (no separate auth-system ID)
   3. A query typed through the withTeamContext wrapper structurally cannot return rows from a different team
   4. Auth callback upserts a user row on first login without error
-**Plans:** 2 plans
+**Plans:** 3 plans
 Plans:
 - [x] 02-01-PLAN.md — Create schema types, dual database accessor (db + teamDb), migration files, migration runner, and schema verification script
 - [x] 02-02-PLAN.md — Extend auth callback with user upsert and personal team creation, add middleware user sync with staleness check, team cookie management, and tenant scoping verification tests
+- [ ] 02-03-PLAN.md — Gap closure: Wire activeTeamId cookie prop into AppShell team context, fix middleware cookie read-after-delete edge case
 
 ### Phase 3: WorkOS Pipes Connections
 **Goal**: Users can connect their GitHub and Linear accounts via the WorkOS Pipes widget, tokens are managed server-side, and all client-side encrypted token storage is removed
@@ -135,7 +136,7 @@ Note: Phase 3 (Pipes) and Phase 4 (Team Formation) both depend on Phase 2 but no
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. WorkOS Auth Migration | 2/2 | Complete | 2026-03-04 |
-| 2. Multi-Tenant DB Schema | 2/2 | Complete | 2026-03-04 |
+| 2. Multi-Tenant DB Schema | 2/3 | Gap closure | - |
 | 3. WorkOS Pipes Connections | 0/? | Not started | - |
 | 4. Team Formation | 0/? | Not started | - |
 | 5. Team Owner Controls | 0/? | Not started | - |
