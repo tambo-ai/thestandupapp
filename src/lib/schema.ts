@@ -19,6 +19,7 @@ export interface TeamsTable {
   name: string;
   slug: string; // unique, URL-friendly identifier
   is_personal: number; // SQLite boolean (0 or 1)
+  workos_organization_id: string | null; // null for personal teams
   created_at: Generated<string>;
   updated_at: Generated<string>;
 }
