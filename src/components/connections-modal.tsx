@@ -23,6 +23,7 @@ export function ConnectionsModal({ isOpen, onClose }: ConnectionsModalProps) {
     return () => document.removeEventListener("keydown", handleKey);
   }, [isOpen, onClose]);
 
+
   if (!isOpen) return null;
 
   const modal = (

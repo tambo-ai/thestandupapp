@@ -93,6 +93,11 @@
   min-height: 0 !important;
 }
 
+/* Hide extra skeleton loading items — widget hardcodes 6 but we only have 2 providers */
+.connections-modal-card .woswidgets-card-list-item:nth-child(n+3) {
+  display: none !important;
+}
+
 /* Fix: WorkOS widget portals (dropdowns, dialogs) must render above our z-50 modal */
 [data-radix-popper-content-wrapper],
 .rt-DialogOverlay,
