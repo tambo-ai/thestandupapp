@@ -1,10 +1,11 @@
 "use client";
 
 import { CanvasSpace } from "@/components/tambo/canvas-space";
+import { ConnectionPrompt } from "@/components/connection-prompt";
+import { ConnectionsModal } from "@/components/connections-modal";
 import { MessageThreadFull } from "@/components/tambo/message-thread-full";
 import { UserHeader } from "@/components/user-header";
 import { components, tools } from "@/lib/tambo";
-import { resolveFilteredMemberNames } from "@/lib/member-filter";
 import type { InitialInputMessage } from "@tambo-ai/react";
 import { TamboProvider } from "@tambo-ai/react";
 import * as React from "react";
@@ -20,7 +21,7 @@ interface Props {
   connectionStatus?: { github: string; linear: string };
 }
 
-function buildSystemPrompt(userName: string, userEmail: string, selectedTeam?: { id: string; name: string } | null, filteredMemberNames?: string[] | null): InitialInputMessage {
+function buildSystemPrompt(userName: string, userEmail: string, selectedTeam?: { id: string; name: string } | null): InitialInputMessage {
   return {
     role: "system",
     content: [
@@ -57,8 +58,7 @@ General rules:
 - When a component accepts direct data (WeeklyGoals items, SummaryPanel, Graph), PREFER filling it yourself using tool results. Only fall back to self-fetching IDs when direct data isn't practical.
 - Be creative — combine stats, sections, and body text to answer any question.
 - ${selectedTeam ? `The user's selected team is "${selectedTeam.name}" (ID: ${selectedTeam.id}). Use this team by default for any team-related requests. Don't ask them which team unless they explicitly want a different one.` : "If the user asks about a team, use listTeams to show options."}
-- When the user asks about themselves ("what am I working on?", "show my PRs"), use getMyPRs for GitHub and look up their Linear identity by matching name/email via getTeamMembers.
-${filteredMemberNames && filteredMemberNames.length > 0 ? `- The user has filtered to these team members: ${filteredMemberNames.join(", ")}. Focus on these people for team queries and reports.` : ""}`,
+- When the user asks about themselves ("what am I working on?", "show my PRs"), use getMyPRs for GitHub and look up their Linear identity by matching name/email via getTeamMembers.`,
       },
     ],
   };
@@ -69,20 +69,34 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
     () => (activeTeamId && activeTeamName ? { id: activeTeamId, name: activeTeamName } : null),
     [activeTeamId, activeTeamName],
   );
-  const [filteredMemberNames, setFilteredMemberNames] = React.useState<string[] | null>(null);
-
-  React.useEffect(() => {
-    if (activeTeamId) {
-      resolveFilteredMemberNames(activeTeamId).then(setFilteredMemberNames);
-    } else {
-      setFilteredMemberNames(null);
-    }
-  }, [activeTeamId]);
 
   const systemPrompt = React.useMemo(
-    () => buildSystemPrompt(userName, userEmail, selectedTeam, filteredMemberNames),
-    [userName, userEmail, selectedTeam, filteredMemberNames],
+    () => buildSystemPrompt(userName, userEmail, selectedTeam),
+    [userName, userEmail, selectedTeam],
   );
+
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [connStatus, setConnStatus] = React.useState(
+    connectionStatus ?? { github: "not_installed", linear: "not_installed" },
+  );
+
+  const refreshConnectionStatus = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/connections/status");
+      const data = await res.json();
+      setConnStatus(data);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const handleModalClose = React.useCallback(() => {
+    setModalOpen(false);
+    refreshConnectionStatus();
+  }, [refreshConnectionStatus]);
+
+  const hasNoConnections =
+    connStatus.github !== "connected" && connStatus.linear !== "connected";
 
   const [chatWidth, setChatWidth] = React.useState(400);
   const [dragging, setDragging] = React.useState(false);
@@ -135,7 +149,15 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
             transition: dragging ? "none" : "width 0.15s ease",
           }}
         >
-          <UserHeader userName={userName} userImage={userImage} />
+          <UserHeader
+            userName={userName}
+            userImage={userImage}
+            connectionStatus={connStatus}
+            onOpenModal={() => setModalOpen(true)}
+          />
+          {hasNoConnections && (
+            <ConnectionPrompt onOpenModal={() => setModalOpen(true)} />
+          )}
           <div className="flex-1 min-h-0">
             <MessageThreadFull />
           </div>
@@ -154,6 +176,7 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
 
         <CanvasSpace />
       </div>
+      <ConnectionsModal isOpen={modalOpen} onClose={handleModalClose} />
     </TamboProvider>
   );
 }
