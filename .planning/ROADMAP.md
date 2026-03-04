@@ -84,12 +84,12 @@ Plans:
   3. Team owner can generate a shareable invite link that grants access when visited
   4. Invited user can click the link (email or shareable), complete sign-in if needed, and land in the team workspace
   5. Any team member can view the list of all current members in the workspace
-**Plans:** 4 plans
+**Plans:** 4 plans (sequential waves 1→2→3→4)
 Plans:
-- [ ] 04-01-PLAN.md — Migration for workos_organization_id, schema update, createTeam/switchTeam/joinTeam server actions, middleware invite route exception
-- [ ] 04-02-PLAN.md — API routes for team create, switch, members, invite-link, invite-email, and join
-- [ ] 04-03-PLAN.md — Team switcher dropdown, creation form, page.tsx/AppShell wiring, invite landing page
-- [ ] 04-04-PLAN.md — Team settings modal (General/Invite/Members tabs), auth callback org membership sync
+- [ ] 04-01-PLAN.md — W1: Migration for workos_organization_id, schema update, switchTeam/joinTeam/setPendingInvite server actions, middleware invite route
+- [ ] 04-02-PLAN.md — W2: API routes for team create, switch, members, invite-link, invite-email, and join
+- [ ] 04-03-PLAN.md — W3: Team switcher dropdown, creation form, page.tsx/AppShell wiring, invite landing page with auto-join
+- [ ] 04-04-PLAN.md — W4: Team settings modal (General/Invite/Members tabs), auth callback org membership sync
 
 ### Phase 5: Team Owner Controls
 **Goal**: Workspace owners can manage team membership and pending invitations, and any member can leave a team
