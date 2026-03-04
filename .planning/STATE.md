@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-03-04T04:42:16.080Z"
-last_activity: 2026-03-04 — Completed Plan 02-04 (script env self-loading gap closure)
+stopped_at: Completed 03-01-PLAN.md (WorkOS Pipes server-side token retrieval)
+last_updated: "2026-03-04T05:15:18.058Z"
+last_activity: 2026-03-04 — Completed Plan 03-01 (WorkOS Pipes server-side token retrieval)
 progress:
   total_phases: 8
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 9
+  completed_plans: 7
+  percent: 78
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 3 of 8 (WorkOS Pipes Connections)
-Plan: 0 of ? in current phase
+Plan: 1 of 3 in current phase
 Status: Executing
-Last activity: 2026-03-04 — Completed Plan 02-04 (script env self-loading gap closure)
+Last activity: 2026-03-04 — Completed Plan 03-01 (WorkOS Pipes server-side token retrieval)
 
-Progress: [██████████] 100%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [██████████] 100%
 *Updated after each plan completion*
 | Phase 02 P03 | 2min | 2 tasks | 3 files |
 | Phase 02 P04 | 1min | 1 tasks | 3 files |
+| Phase 03 P01 | 3min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - [Phase 02-03]: Derived selectedTeam via useMemo from server props instead of useState+useEffect from localStorage
 - [Phase 02-03]: Used hasValidActiveTeam boolean to track cookie validity across middleware steps instead of re-reading request cookies
 - [Phase 02-04]: Used Node 22 built-in process.loadEnvFile() instead of adding dotenv dependency for standalone tsx script env loading
+- [Phase 03-01]: Kept withGitHubToken and withLinearClient wrapper signatures identical so no API route files needed changes
+- [Phase 03-01]: Removed linearClientFromRequest entirely -- only withLinearClient wrapper needed with server-side Pipes tokens
 
 ### Pending Todos
 
@@ -89,6 +92,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T04:42:16.078Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-workos-pipes-connections/03-CONTEXT.md
+Last session: 2026-03-04T05:15:18.056Z
+Stopped at: Completed 03-01-PLAN.md (WorkOS Pipes server-side token retrieval)
+Resume file: None
