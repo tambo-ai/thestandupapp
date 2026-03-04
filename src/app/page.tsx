@@ -1,165 +1,220 @@
-"use client";
+import { withAuth, getSignInUrl } from "@workos-inc/authkit-nextjs";
+import Link from "next/link";
 
-import { CanvasSpace } from "@/components/tambo/canvas-space";
-import { MessageThreadFull } from "@/components/tambo/message-thread-full";
-import { UserHeader } from "@/components/user-header";
-import { authClient } from "@/lib/auth-client";
-import { components, tools } from "@/lib/tambo";
-import { resolveFilteredMemberNames } from "@/lib/member-filter";
-import { getSelectedTeam, setTokenUserId } from "@/lib/user-tokens";
-import type { InitialInputMessage } from "@tambo-ai/react";
-import { TamboProvider } from "@tambo-ai/react";
-import * as React from "react";
-
-function buildSystemPrompt(userName: string, userEmail: string, selectedTeam?: { id: string; name: string } | null, filteredMemberNames?: string[] | null): InitialInputMessage {
-  return {
-    role: "system",
-    content: [
-      {
-        type: "text",
-        text: `You are a team standup assistant. You help engineering teams understand their collective status across Linear and GitHub.
-
-The current user is "${userName}" (${userEmail}). When they say "I", "me", "my", or "what am I working on", they mean themselves. The GitHub token and Linear API key belong to this user, so getMyPRs returns THEIR pull requests and their Linear identity can be found by matching their name/email in getTeamMembers.
-
-You have access to tools: listTeams, getTeamMembers, findGitHubUser, getMyPRs. Use them to discover data.
-
-The canvas arranges components in a grid that fits the viewport (no page scrolling). Up to 4 components can be visible at once — new ones push out the oldest. Users can dismiss individual components. You can render multiple components in a single response for a richer dashboard view.
-
-SPECIALIZED COMPONENTS (self-fetching, just pass IDs):
-
-1. TeamOverview — "show me the team" → pass { teamId, teamName }
-2. PersonDetail — "what's [person] working on?" → use getTeamMembers to find linearUserId + email, findGitHubUser for GitHub username, then pass { linearUserId, name, githubUsername?, avatar?, summary }
-3. WeeklyGoals — progress tracker with items grouped by status. YOU provide the data: { title, items: [{ identifier, title, status, assignee?, isAtRisk? }] }. Use tools to discover what people are working on, then build the items list yourself.
-4. RiskReport — "what's at risk?", "blockers" → pass { teamId, teamName? }
-5. Graph — for any data visualization (bar, line, pie charts)
-
-FLEXIBLE COMPONENT (you fill in the data):
-
-6. SummaryPanel — Use for ANYTHING else: comparisons, daily digests, custom reports, action items, meeting notes, team health summaries, velocity analysis, or any structured info. You provide:
-   - title, subtitle (optional)
-   - stats: array of { label, value, trend?, color? } — shown as metric cards
-   - body: free text for narrative content
-   - sections: array of { title, items: [{ label, detail?, status?, url? }] }
-
-   This is your most versatile component. Use it creatively for any request that doesn't map perfectly to a specialized component.
-
-General rules:
-- Keep chat responses brief — 1-2 sentences. Rich data goes in canvas components.
-- When a component accepts direct data (WeeklyGoals items, SummaryPanel, Graph), PREFER filling it yourself using tool results. Only fall back to self-fetching IDs when direct data isn't practical.
-- Be creative — combine stats, sections, and body text to answer any question.
-- ${selectedTeam ? `The user's selected team is "${selectedTeam.name}" (ID: ${selectedTeam.id}). Use this team by default for any team-related requests. Don't ask them which team unless they explicitly want a different one.` : "If the user asks about a team, use listTeams to show options."}
-- When the user asks about themselves ("what am I working on?", "show my PRs"), use getMyPRs for GitHub and look up their Linear identity by matching name/email via getTeamMembers.
-${filteredMemberNames && filteredMemberNames.length > 0 ? `- The user has filtered to these team members: ${filteredMemberNames.join(", ")}. Focus on these people for team queries and reports.` : ""}`,
-      },
-    ],
-  };
-}
-
-function AppShell() {
-  const { data: session, isPending } = authClient.useSession();
-  const userId = session?.user?.id;
-  const userName = session?.user?.name ?? "";
-  const userEmail = session?.user?.email ?? "";
-  const userToken = session?.session?.token;
-  const [selectedTeam, setSelectedTeam] = React.useState<{ id: string; name: string } | null>(null);
-  const [filteredMemberNames, setFilteredMemberNames] = React.useState<string[] | null>(null);
-
-  React.useEffect(() => {
-    if (userId) {
-      setTokenUserId(userId).then(async () => {
-        const team = await getSelectedTeam();
-        setSelectedTeam(team);
-        if (team) {
-          const names = await resolveFilteredMemberNames(team.id);
-          setFilteredMemberNames(names);
-        } else {
-          setFilteredMemberNames(null);
-        }
-      });
-    }
-  }, [userId]);
-
-  const systemPrompt = React.useMemo(
-    () => buildSystemPrompt(userName, userEmail, selectedTeam, filteredMemberNames),
-    [userName, userEmail, selectedTeam, filteredMemberNames],
-  );
-
-  const [chatWidth, setChatWidth] = React.useState(400);
-  const [dragging, setDragging] = React.useState(false);
-  const rafRef = React.useRef(0);
-
-  const onDragStart = React.useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      setDragging(true);
-      const startX = e.clientX;
-      const startW = chatWidth;
-
-      function onMove(ev: MouseEvent) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => {
-          setChatWidth(Math.min(Math.max(startW + ev.clientX - startX, 300), 600));
-        });
-      }
-      function onUp() {
-        cancelAnimationFrame(rafRef.current);
-        setDragging(false);
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-      }
-
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-    },
-    [chatWidth],
-  );
-
-  if (isPending || !userToken) return null;
+export default async function LandingPage() {
+  const { user } = await withAuth();
+  const signInUrl = user ? null : await getSignInUrl();
 
   return (
-    <TamboProvider
-      apiKey={process.env.NEXT_PUBLIC_TAMBO_API_KEY!}
-      components={components}
-      tools={tools}
-      tamboUrl={process.env.NEXT_PUBLIC_TAMBO_URL}
-      userToken={userToken}
-      initialMessages={[systemPrompt]}
-    >
-      <div className="flex h-screen w-screen overflow-hidden">
-        <div
-          className="shrink-0 relative flex flex-col"
-          style={{
-            width: chatWidth,
-            transition: dragging ? "none" : "width 0.15s ease",
-          }}
+    <div className="relative min-h-screen bg-[#FAFAF9] flex flex-col items-center justify-center overflow-hidden">
+      {/* Subtle dot grid */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.35]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, #c5c5c0 0.5px, transparent 0.5px)",
+          backgroundSize: "24px 24px",
+        }}
+      />
+
+      {/* Radial fade from center */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 50% 50% at 50% 50%, transparent 0%, #FAFAF9 100%)",
+        }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center text-center px-6">
+        <p
+          className="text-[11px] font-medium tracking-[0.25em] uppercase mb-5 login-fade-up"
+          style={{ color: "#999", animationDelay: "0s" }}
         >
-          <UserHeader />
-          <div className="flex-1 min-h-0">
-            <MessageThreadFull />
-          </div>
-          <div
-            onMouseDown={onDragStart}
-            className="absolute top-0 -right-1.5 w-3 h-full cursor-col-resize z-10 group flex items-center justify-center"
+          The Standup App
+        </p>
+
+        <h1
+          className="text-[clamp(32px,5.5vw,48px)] font-semibold tracking-[-0.03em] text-[#1A1A1A] leading-[1.1] max-w-[460px] login-fade-up"
+          style={{ animationDelay: "0.08s" }}
+        >
+          Is there an issue
+          <br />
+          for that?
+        </h1>
+
+        <p
+          className="mt-4 text-[15px] leading-relaxed max-w-[340px] login-fade-up"
+          style={{ color: "#888", animationDelay: "0.16s" }}
+        >
+          Your team&apos;s Linear and GitHub activity in one place.
+          Ask a question, see your dashboard.
+        </p>
+
+        {user ? (
+          <Link
+            href="/app"
+            className="mt-9 flex items-center gap-3 rounded-xl bg-[#1A1A1A] px-7 py-3 text-[14px] font-medium text-white transition-all duration-200 hover:bg-[#333] hover:shadow-lg login-fade-up"
+            style={{ animationDelay: "0.28s" }}
           >
-            <div
-              className="w-px h-full transition-all duration-150 group-hover:w-0.5 group-hover:rounded-full"
+            Go to app
+          </Link>
+        ) : (
+          <a
+            href={signInUrl!}
+            className="mt-9 flex items-center gap-3 rounded-xl bg-[#1A1A1A] px-7 py-3 text-[14px] font-medium text-white transition-all duration-200 hover:bg-[#333] hover:shadow-lg login-fade-up"
+            style={{ animationDelay: "0.28s" }}
+          >
+            Sign in
+          </a>
+        )}
+
+        {/* Feature pills */}
+        <div
+          className="flex flex-wrap justify-center gap-2.5 mt-14 login-fade-up"
+          style={{ animationDelay: "0.44s" }}
+        >
+          {[
+            { label: "Team overview", color: "#22c55e" },
+            { label: "Risk detection", color: "#ef4444" },
+            { label: "PR tracking", color: "#6366f1" },
+          ].map(({ label, color }) => (
+            <span
+              key={label}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] border bg-white"
               style={{
-                background: dragging ? "rgba(0,0,0,0.22)" : "rgba(0,0,0,0.06)",
+                color: "#777",
+                borderColor: "rgba(0,0,0,0.06)",
               }}
-            />
-          </div>
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ background: color }}
+              />
+              {label}
+            </span>
+          ))}
         </div>
 
-        <CanvasSpace />
-      </div>
-    </TamboProvider>
-  );
-}
+        {/* Mock dashboard preview */}
+        <div
+          className="mt-16 w-full max-w-[660px] login-fade-up"
+          style={{ animationDelay: "0.56s" }}
+        >
+          <div
+            className="rounded-2xl border overflow-hidden bg-white"
+            style={{
+              borderColor: "rgba(0,0,0,0.08)",
+              boxShadow:
+                "0 1px 2px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06)",
+            }}
+          >
+            {/* Title bar */}
+            <div
+              className="flex items-center gap-1.5 px-4 py-2.5 border-b"
+              style={{ borderColor: "rgba(0,0,0,0.05)" }}
+            >
+              <span className="w-2 h-2 rounded-full bg-[#FF5F57]" />
+              <span className="w-2 h-2 rounded-full bg-[#FEBC2E]" />
+              <span className="w-2 h-2 rounded-full bg-[#28C840]" />
+              <span className="ml-3 text-[10px] text-[#BBB]">
+                standup.tambo.co
+              </span>
+            </div>
 
-export default function Home() {
-  return <AppShell />;
+            {/* Mock content */}
+            <div className="flex">
+              {/* Sidebar mock */}
+              <div
+                className="w-[160px] shrink-0 p-3.5 border-r hidden sm:block"
+                style={{
+                  borderColor: "rgba(0,0,0,0.05)",
+                  background: "#FDFDFC",
+                }}
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[rgba(0,0,0,0.06)]" />
+                    <div className="h-2 w-14 rounded-full bg-[rgba(0,0,0,0.06)]" />
+                  </div>
+                  <div className="h-1.5 w-20 rounded-full bg-[rgba(0,0,0,0.04)]" />
+                  <div className="h-1.5 w-16 rounded-full bg-[rgba(0,0,0,0.04)]" />
+                  <div className="h-1.5 w-24 rounded-full bg-[rgba(0,0,0,0.04)]" />
+                  <div className="pt-1.5">
+                    <div className="h-6 rounded-lg bg-[rgba(0,0,0,0.02)] border border-[rgba(0,0,0,0.05)]" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Canvas mock */}
+              <div className="flex-1 p-3.5 bg-[#FAFAF9]">
+                <div className="grid grid-cols-2 gap-2.5">
+                  {[
+                    { title: "Team Overview", rows: 4, accent: "#22c55e" },
+                    { title: "Risk Report", rows: 3, accent: "#ef4444" },
+                    { title: "Weekly Goals", rows: 3, accent: "#3b82f6" },
+                    { title: "My PRs", rows: 2, accent: "#a855f7" },
+                  ].map(({ title, rows, accent }) => (
+                    <div
+                      key={title}
+                      className="rounded-lg border bg-white p-2.5"
+                      style={{ borderColor: "rgba(0,0,0,0.06)" }}
+                    >
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: accent }}
+                        />
+                        <span className="text-[9px] font-medium text-[#888]">
+                          {title}
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {Array.from({ length: rows }).map((_, i) => (
+                          <div
+                            key={i}
+                            className="h-1.5 rounded-full bg-[rgba(0,0,0,0.04)]"
+                            style={{
+                              width: `${65 + Math.sin(i * 2.3) * 30}%`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Fade-out at bottom */}
+          <div
+            className="h-20 -mt-20 relative z-10"
+            style={{
+              background:
+                "linear-gradient(to top, #FAFAF9 30%, transparent)",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div
+        className="absolute bottom-6 text-[11px] login-fade-up"
+        style={{ color: "#BBB", animationDelay: "0.7s" }}
+      >
+        Built with{" "}
+        <a
+          href="https://tambo.co"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-[#888] transition-colors"
+          style={{ color: "#999" }}
+        >
+          Tambo
+        </a>
+      </div>
+    </div>
+  );
 }
