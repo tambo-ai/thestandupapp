@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-03-PLAN.md (delete old token system and simplify fetch calls)
-last_updated: "2026-03-04T05:20:02.853Z"
+stopped_at: Completed 03-02-PLAN.md (connections UI with Pipes widget, status dots, onboarding prompt)
+last_updated: "2026-03-04T05:21:59.146Z"
 last_activity: 2026-03-04 — Completed Plan 03-03 (delete old token system and simplify fetch calls)
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
   percent: 89
 ---
 
@@ -55,6 +55,7 @@ Progress: [█████████░] 89%
 | Phase 02 P04 | 1min | 1 tasks | 3 files |
 | Phase 03 P01 | 3min | 2 tasks | 7 files |
 | Phase 03 P03 | 2min | 2 tasks | 7 files |
+| Phase 03 P02 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Recent decisions affecting current work:
 - [Phase 03-01]: Removed linearClientFromRequest entirely -- only withLinearClient wrapper needed with server-side Pipes tokens
 - [Phase 03-03]: Removed settings gear and needsSetup banner from UserHeader since SettingsModal was deleted
 - [Phase 03-03]: Stubbed resolveFilteredMemberNames and useFilteredMemberIds to return null for API compatibility with parallel Plan 03-02
+- [Phase 03-02]: Used title attribute for dot tooltips instead of Radix tooltip component -- simpler and avoids extra CSS overhead
+- [Phase 03-02]: Removed filteredMemberNames from system prompt since member filter UI was deleted with old settings modal
 
 ### Pending Todos
 
@@ -95,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T05:20:02.850Z
-Stopped at: Completed 03-03-PLAN.md (delete old token system and simplify fetch calls)
+Last session: 2026-03-04T05:21:59.143Z
+Stopped at: Completed 03-02-PLAN.md (connections UI with Pipes widget, status dots, onboarding prompt)
 Resume file: None

@@ -17,12 +17,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Connections
 
-- [ ] **CONN-01**: User can connect their GitHub account via WorkOS Pipes widget
-- [ ] **CONN-02**: User can connect their Linear account via WorkOS Pipes widget
-- [ ] **CONN-03**: User can see the status of their connected accounts (connected/disconnected/needs reauth)
-- [ ] **CONN-04**: User can reauthorize a broken connection via Pipes widget
-- [ ] **CONN-05**: User can disconnect an account
-- [ ] **CONN-06**: New user sees a prompt to connect accounts on first use
+- [x] **CONN-01**: User can connect their GitHub account via WorkOS Pipes widget
+- [x] **CONN-02**: User can connect their Linear account via WorkOS Pipes widget
+- [x] **CONN-03**: User can see the status of their connected accounts (connected/disconnected/needs reauth)
+- [x] **CONN-04**: User can reauthorize a broken connection via Pipes widget
+- [x] **CONN-05**: User can disconnect an account
+- [x] **CONN-06**: New user sees a prompt to connect accounts on first use
 - [x] **CONN-07**: Connected account tokens are managed server-side via WorkOS Pipes (never in localStorage)
 - [x] **CONN-08**: Client-side encrypted token storage (user-tokens.ts) is fully removed
 
@@ -108,12 +108,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-03 | Phase 1 | Complete |
 | AUTH-04 | Phase 1 | Complete |
 | AUTH-05 | Phase 1 | Complete |
-| CONN-01 | Phase 3 | Pending |
-| CONN-02 | Phase 3 | Pending |
-| CONN-03 | Phase 3 | Pending |
-| CONN-04 | Phase 3 | Pending |
-| CONN-05 | Phase 3 | Pending |
-| CONN-06 | Phase 3 | Pending |
+| CONN-01 | Phase 3 | Complete |
+| CONN-02 | Phase 3 | Complete |
+| CONN-03 | Phase 3 | Complete |
+| CONN-04 | Phase 3 | Complete |
+| CONN-05 | Phase 3 | Complete |
+| CONN-06 | Phase 3 | Complete |
 | CONN-07 | Phase 3 | Complete |
 | CONN-08 | Phase 3 | Complete |
 | TEAM-01 | Phase 4 | Pending |
