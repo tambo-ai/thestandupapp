@@ -47,7 +47,10 @@ Plans:
   2. User record is keyed on WorkOS user ID (no separate auth-system ID)
   3. A query typed through the withTeamContext wrapper structurally cannot return rows from a different team
   4. Auth callback upserts a user row on first login without error
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Create schema types, dual database accessor (db + teamDb), migration files, migration runner, and schema verification script
+- [ ] 02-02-PLAN.md — Extend auth callback with user upsert and personal team creation, add middleware user sync with staleness check, team cookie management, and tenant scoping verification tests
 
 ### Phase 3: WorkOS Pipes Connections
 **Goal**: Users can connect their GitHub and Linear accounts via the WorkOS Pipes widget, tokens are managed server-side, and all client-side encrypted token storage is removed
@@ -132,7 +135,7 @@ Note: Phase 3 (Pipes) and Phase 4 (Team Formation) both depend on Phase 2 but no
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. WorkOS Auth Migration | 2/2 | Complete | 2026-03-04 |
-| 2. Multi-Tenant DB Schema | 0/? | Not started | - |
+| 2. Multi-Tenant DB Schema | 0/2 | Not started | - |
 | 3. WorkOS Pipes Connections | 0/? | Not started | - |
 | 4. Team Formation | 0/? | Not started | - |
 | 5. Team Owner Controls | 0/? | Not started | - |
