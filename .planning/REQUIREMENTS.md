@@ -24,7 +24,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **CONN-05**: User can disconnect an account
 - [ ] **CONN-06**: New user sees a prompt to connect accounts on first use
 - [x] **CONN-07**: Connected account tokens are managed server-side via WorkOS Pipes (never in localStorage)
-- [ ] **CONN-08**: Client-side encrypted token storage (user-tokens.ts) is fully removed
+- [x] **CONN-08**: Client-side encrypted token storage (user-tokens.ts) is fully removed
 
 ### Team Management
 
@@ -115,7 +115,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONN-05 | Phase 3 | Pending |
 | CONN-06 | Phase 3 | Pending |
 | CONN-07 | Phase 3 | Complete |
-| CONN-08 | Phase 3 | Pending |
+| CONN-08 | Phase 3 | Complete |
 | TEAM-01 | Phase 4 | Pending |
 | TEAM-02 | Phase 4 | Pending |
 | TEAM-03 | Phase 4 | Pending |
