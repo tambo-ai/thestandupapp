@@ -1,4 +1,5 @@
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
 import "./globals.css";
 
 const sans = Inter({
@@ -27,7 +28,7 @@ export default function RootLayout({
       <body
         className={`${sans.variable} ${mono.variable} antialiased`}
       >
-        {children}
+        <AuthKitProvider>{children}</AuthKitProvider>
       </body>
     </html>
   );
