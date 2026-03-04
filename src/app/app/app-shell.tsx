@@ -17,6 +17,7 @@ interface Props {
   userToken: string;
   activeTeamId?: string | null;
   activeTeamName?: string | null;
+  connectionStatus?: { github: string; linear: string };
 }
 
 function buildSystemPrompt(userName: string, userEmail: string, selectedTeam?: { id: string; name: string } | null, filteredMemberNames?: string[] | null): InitialInputMessage {
@@ -63,7 +64,7 @@ ${filteredMemberNames && filteredMemberNames.length > 0 ? `- The user has filter
   };
 }
 
-export function AppShell({ userId, userName, userEmail, userImage, userToken, activeTeamId, activeTeamName }: Props) {
+export function AppShell({ userId, userName, userEmail, userImage, userToken, activeTeamId, activeTeamName, connectionStatus }: Props) {
   const selectedTeam = React.useMemo(
     () => (activeTeamId && activeTeamName ? { id: activeTeamId, name: activeTeamName } : null),
     [activeTeamId, activeTeamName],
