@@ -1,4 +1,4 @@
-import { handleAuth } from '@workos-inc/authkit-nextjs';
+import { getWorkOS, handleAuth } from '@workos-inc/authkit-nextjs';
 import { cookies } from 'next/headers';
 import { sql } from 'kysely';
 import { db, getFullDb } from '@/lib/db';
@@ -83,6 +83,120 @@ export const GET = handleAuth({
         secure: process.env.NODE_ENV === 'production',
         maxAge: 30 * 24 * 60 * 60, // 30 days
       });
+    }
+
+    // 5. Sync WorkOS organization memberships to local DB
+    // Handles users invited via WorkOS email invitation who auto-joined the org during sign-up
+    try {
+      const workos = getWorkOS();
+      const orgMemberships = await workos.userManagement.listOrganizationMemberships({
+        userId: user.id,
+      });
+
+      for (const membership of orgMemberships.data) {
+        // Find local team by workos_organization_id
+        const team = await fullDb
+          .selectFrom('teams')
+          .where('workos_organization_id', '=', membership.organizationId)
+          .select(['id'])
+          .executeTakeFirst();
+
+        if (!team) continue; // Org exists in WorkOS but no local team -- skip
+
+        // Check if local membership already exists
+        const existing = await fullDb
+          .selectFrom('memberships')
+          .where('team_id', '=', team.id)
+          .where('user_id', '=', user.id)
+          .select('id')
+          .executeTakeFirst();
+
+        if (!existing) {
+          await fullDb
+            .insertInto('memberships')
+            .values({
+              id: crypto.randomUUID(),
+              team_id: team.id,
+              user_id: user.id,
+              role: 'member',
+            })
+            .execute();
+        }
+      }
+    } catch (error) {
+      // Don't block auth flow if membership sync fails
+      console.error('[auth callback] Org membership sync error:', error);
+    }
+
+    // 6. Check for pending invite (set by setPendingInvite when unauth user clicked Join)
+    const pendingInvite = cookieStore.get('pending_invite_token')?.value;
+    if (pendingInvite) {
+      try {
+        const invite = await fullDb
+          .selectFrom('invite_links')
+          .innerJoin('teams', 'teams.id', 'invite_links.team_id')
+          .where('invite_links.token', '=', pendingInvite)
+          .where('invite_links.revoked_at', 'is', null)
+          .select([
+            'invite_links.id',
+            'invite_links.team_id',
+            'teams.workos_organization_id',
+            'teams.name',
+          ])
+          .executeTakeFirst();
+
+        if (invite) {
+          // Check not already a member (may have been synced in Step 5 above)
+          const existingMembership = await fullDb
+            .selectFrom('memberships')
+            .where('team_id', '=', invite.team_id)
+            .where('user_id', '=', user.id)
+            .select('id')
+            .executeTakeFirst();
+
+          if (!existingMembership) {
+            await fullDb
+              .insertInto('memberships')
+              .values({
+                id: crypto.randomUUID(),
+                team_id: invite.team_id,
+                user_id: user.id,
+                role: 'member',
+              })
+              .execute();
+
+            // Update invite use count
+            await fullDb
+              .updateTable('invite_links')
+              .set({ use_count: sql`use_count + 1` })
+              .where('id', '=', invite.id)
+              .execute();
+
+            // Create WorkOS org membership if team has org
+            if (invite.workos_organization_id) {
+              const workos = getWorkOS();
+              await workos.userManagement.createOrganizationMembership({
+                organizationId: invite.workos_organization_id,
+                userId: user.id,
+              });
+            }
+          }
+
+          // Set active team to the newly joined team
+          cookieStore.set('active_team_id', invite.team_id, {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 30 * 24 * 60 * 60,
+          });
+        }
+      } catch (error) {
+        console.error('[auth callback] Pending invite join error:', error);
+      }
+
+      // Always clear the pending invite cookie
+      cookieStore.delete('pending_invite_token');
     }
   },
 });

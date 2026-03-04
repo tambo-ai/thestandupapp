@@ -4,6 +4,7 @@ import { CanvasSpace } from "@/components/tambo/canvas-space";
 import { ConnectionPrompt } from "@/components/connection-prompt";
 import { ConnectionsModal } from "@/components/connections-modal";
 import { MessageThreadFull } from "@/components/tambo/message-thread-full";
+import { TeamSettingsModal } from "@/components/team-settings-modal";
 import { TeamSwitcher } from "@/components/team-switcher";
 import { UserHeader } from "@/components/user-header";
 import { components, tools } from "@/lib/tambo";
@@ -248,6 +249,15 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
         <CanvasSpace />
       </div>
       <ConnectionsModal isOpen={modalOpen} onClose={handleModalClose} />
+      <TeamSettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        teamId={activeTeam?.id ?? ""}
+        teamName={activeTeam?.name ?? ""}
+        teamSlug={activeTeam?.slug ?? ""}
+        isPersonal={activeTeam?.isPersonal ?? true}
+        isOwner={activeTeam?.role === "owner"}
+      />
     </TamboProvider>
   );
 }
