@@ -96,8 +96,11 @@
 /* Fix: WorkOS widget portals (dropdowns, dialogs) must render above our z-50 modal */
 [data-radix-popper-content-wrapper],
 .rt-DialogOverlay,
+.rt-DialogContent,
 .rt-AlertDialogOverlay,
-.rt-BaseDialogOverlay {
+.rt-AlertDialogContent,
+.rt-BaseDialogOverlay,
+.rt-BaseDialogContent {
   z-index: 100 !important;
 }
 
