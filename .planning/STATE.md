@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phase 6 context gathered
-last_updated: "2026-03-05T02:16:48.003Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-05T02:37:23.062Z"
 last_activity: "2026-03-05 — Completed 05-03: general tab editing and removal toast"
 progress:
   total_phases: 8
   completed_phases: 5
-  total_plans: 17
-  completed_plans: 17
+  total_plans: 20
+  completed_plans: 18
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** A team can see what everyone is working on across GitHub and Linear through a single AI-powered conversation, without anyone manually writing status updates
-**Current focus:** Phase 5 in progress — executing Team Owner Controls plans
+**Current focus:** Phase 6 in progress — executing Team-Scoped AI Tools plans
 
 ## Current Position
 
-Phase: 5 of 8 (Team Owner Controls) -- COMPLETE
-Plan: 3 of 3 in current phase (05-03 complete)
-Status: Phase 5 complete
-Last activity: 2026-03-05 — Completed 05-03: general tab editing and removal toast
+Phase: 6 of 8 (Team-Scoped AI Tools)
+Plan: 1 of 3 in current phase (06-01 complete)
+Status: In progress
+Last activity: 2026-03-05 — Completed 06-01: cross-member token infrastructure
 
-Progress: [██████████] 100%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [██████████] 100%
 | Phase 05 P01 | 2min | 2 tasks | 5 files |
 | Phase 05 P02 | 2min | 2 tasks | 2 files |
 | Phase 05 P03 | 2min | 2 tasks | 3 files |
+| Phase 06 P01 | 3min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,8 @@ Recent decisions affecting current work:
 - [Phase 05-02]: Used summary line inside tab content instead of modifying tab label -- avoids prop-drilling complexity
 - [Phase 05-03]: Auto-derive slug from name changes unless user has manually customized the slug field
 - [Phase 05-03]: Used middleware cookie (httpOnly: false, 60s maxAge) for removed-member notification -- client-side readable, auto-expires
+- [Phase 06]: Shared-team validation query joins teams table to get workos_organization_id in a single query
+- [Phase 06]: Cross-member Pipes calls use the team's workos_organization_id from DB rather than session organizationId
 
 ### Pending Todos
 
@@ -120,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T02:16:48.001Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-team-scoped-ai-tools/06-CONTEXT.md
+Last session: 2026-03-05T02:37:23.059Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
