@@ -42,6 +42,9 @@ A team can see what everyone is working on across GitHub and Linear through a si
 - [ ] Team shares a workspace (shared tools, config, team-wide queries)
 - [ ] Workspace owner can manage team membership
 - [ ] AI can answer "what is the team working on" by aggregating across members' connections
+- [ ] Live standup mode: shared screen where team views the same AI conversation
+- [ ] Standup mode has input control (one person drives at a time, or priority system)
+- [ ] Any team member can participate during a live standup session
 
 ### Out of Scope
 
