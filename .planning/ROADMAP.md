@@ -101,7 +101,11 @@ Plans:
   3. Workspace owner can see a list of all pending (unaccepted) invitations
   4. Workspace owner can resend a pending invitation email
   5. Workspace owner can revoke a pending invitation so the link stops working
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 05-01-PLAN.md — W1: API routes for leave, remove member, invitations list/resend/revoke, team update, team delete
+- [ ] 05-02-PLAN.md — W2: Members tab overhaul with pending invitations, three-dot menus, inline confirm, leave button
+- [ ] 05-03-PLAN.md — W3: Editable General tab with auto-save, delete team danger zone, removed-member toast
 
 ### Phase 6: Team-Scoped AI Tools
 **Goal**: The AI can answer team-wide questions by aggregating data across all connected team members' accounts, while restricting write operations to the acting user only and preserving per-user conversation threads
@@ -150,7 +154,7 @@ Note: Phase 3 (Pipes) and Phase 4 (Team Formation) both depend on Phase 2 but no
 | 2. Multi-Tenant DB Schema | 3/4 | UAT gap closure | - |
 | 3. WorkOS Pipes Connections | 4/4 | Complete   | 2026-03-04 |
 | 4. Team Formation | 4/4 | Complete   | 2026-03-04 |
-| 5. Team Owner Controls | 0/? | Not started | - |
+| 5. Team Owner Controls | 0/3 | Planned | - |
 | 6. Team-Scoped AI Tools | 0/? | Not started | - |
 | 7. Live Standup Sessions | 0/? | Not started | - |
 | 8. Driver Control and Summary | 0/? | Not started | - |
