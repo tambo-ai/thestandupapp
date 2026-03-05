@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 6 of 8 (Team-Scoped AI Tools)
-Plan: 5 of 5 in current phase (06-05 complete, gap closure)
+Plan: 5 of 5 in current phase (06-04 gap closure complete)
 Status: Phase 6 gap closure in progress
-Last activity: 2026-03-05 — Completed 06-05: partial error handling guidance in AI tool descriptions
+Last activity: 2026-03-04 — Completed 06-04: per-team thread isolation via composite userKey
 
 Progress: [██████████] 95%
 
@@ -119,6 +119,8 @@ Recent decisions affecting current work:
 - [Phase 06-03]: Used Array<{id, name}> for memberIds so member names are always available in aggregated output
 - [Phase 06-03]: Different attribution patterns per tool type: visibleTo for dedup tools, memberName for flat result tools
 - [Phase 06-03]: Added getPullRequests as explicit tool replacing implicit getMyPRs system prompt reference
+- [Phase 06-04]: Used server-side thread pre-creation route to avoid TamboProvider userKey+userToken auth conflict
+- [Phase 06-04]: Created TeamScopedThreadArea inner component to call useTambo() inside TamboProvider for initThread access
 - [Phase 06-05]: Description-only changes to tool definitions -- no logic or schema shape modifications needed since underlying code already handles partial errors correctly
 
 ### Pending Todos
@@ -133,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T03:18:36.003Z
-Stopped at: Completed 06-05-PLAN.md
+Last session: 2026-03-04T21:39:00Z
+Stopped at: Completed 06-04-PLAN.md
 Resume file: None

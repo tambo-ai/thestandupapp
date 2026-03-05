@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: WorkOS Pipes Connections** - Replace localStorage token storage with WorkOS Pipes for GitHub and Linear (completed 2026-03-04)
 - [x] **Phase 4: Team Formation** - Create teams, invite members, and join via link or email (completed 2026-03-04)
 - [ ] **Phase 5: Team Owner Controls** - Member management, invitation management, and leave/remove flows
-- [ ] **Phase 6: Team-Scoped AI Tools** - AI queries across all team members' connections for cross-team standup answers
+- [x] **Phase 6: Team-Scoped AI Tools** - AI queries across all team members' connections for cross-team standup answers (completed 2026-03-05)
 - [ ] **Phase 7: Live Standup Sessions** - Start, join, and end shared AI sessions with real-time sync and presence
 - [ ] **Phase 8: Driver Control and Summary** - Floor control, driver rotation, and post-standup AI summary
 
@@ -117,7 +117,7 @@ Plans:
   3. Write operations (open issue, create PR) use only the requesting user's own token — never another member's
   4. Each user's conversation history is private to them and persists independently across sessions
   5. The AI system prompt reflects current team membership and connection data from the server, not from localStorage
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 Plans:
 - [x] 06-01-PLAN.md — W1: Cross-member token wrappers (withGitHubTokenForUser, withLinearClientForUser), team context helper, update all read API routes
 - [x] 06-02-PLAN.md — W1: Server-side team roster in page.tsx, contextHelpers + composite userKey in AppShell, thread name display
@@ -161,6 +161,6 @@ Note: Phase 3 (Pipes) and Phase 4 (Team Formation) both depend on Phase 2 but no
 | 3. WorkOS Pipes Connections | 4/4 | Complete   | 2026-03-04 |
 | 4. Team Formation | 4/4 | Complete   | 2026-03-04 |
 | 5. Team Owner Controls | 1/3 | In Progress|  |
-| 6. Team-Scoped AI Tools | 4/5 | In Progress|  |
+| 6. Team-Scoped AI Tools | 5/5 | Complete   | 2026-03-05 |
 | 7. Live Standup Sessions | 0/? | Not started | - |
 | 8. Driver Control and Summary | 0/? | Not started | - |
