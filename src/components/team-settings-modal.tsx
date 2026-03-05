@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Link, LogOut, Mail, MoreVertical, RefreshCw, User, Users, X } from "lucide-react";
+import { AlertTriangle, Check, Copy, Link, LogOut, Mail, MoreVertical, RefreshCw, User, Users, X } from "lucide-react";
 import * as React from "react";
 import { createPortal } from "react-dom";
 
@@ -146,7 +146,14 @@ export function TeamSettingsModal({
         {/* Tab Content */}
         <div className="px-5 py-4 min-h-[200px]">
           {activeTab === "general" && (
-            <GeneralTab teamName={teamName} teamSlug={teamSlug} />
+            <GeneralTab
+              teamId={teamId}
+              teamName={teamName}
+              teamSlug={teamSlug}
+              isOwner={isOwner}
+              isPersonal={isPersonal}
+              onClose={onClose}
+            />
           )}
           {activeTab === "invite" && (
             <InviteTab teamId={teamId} isOwner={isOwner} />
@@ -164,35 +171,371 @@ export function TeamSettingsModal({
 
 /* ── General Tab ─────────────────────────────────────────────── */
 
+const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function GeneralTab({
+  teamId,
   teamName,
   teamSlug,
+  isOwner,
+  isPersonal,
+  onClose,
 }: {
+  teamId: string;
   teamName: string;
   teamSlug: string;
+  isOwner: boolean;
+  isPersonal: boolean;
+  onClose: () => void;
 }) {
+  const [name, setName] = React.useState(teamName);
+  const [slug, setSlug] = React.useState(teamSlug);
+  const [originalSlug, setOriginalSlug] = React.useState(teamSlug);
+  const [slugCustomized, setSlugCustomized] = React.useState(false);
+  const [saving, setSaving] = React.useState<"name" | "slug" | null>(null);
+  const [saved, setSaved] = React.useState<"name" | "slug" | null>(null);
+  const [slugError, setSlugError] = React.useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [deleteInput, setDeleteInput] = React.useState("");
+  const [deleting, setDeleting] = React.useState(false);
+  const [leaveConfirm, setLeaveConfirm] = React.useState(false);
+  const [leaveError, setLeaveError] = React.useState<string | null>(null);
+  const [leavingTeam, setLeavingTeam] = React.useState(false);
+
+  const handleNameBlur = async () => {
+    if (name === teamName || !name.trim()) return;
+    setSaving("name");
+    try {
+      const res = await fetch("/api/teams/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, name: name.trim() }),
+      });
+      // 403 = removed from team
+      if (res.status === 403) { window.location.href = "/app"; return; }
+      if (res.ok) {
+        setSaved("name");
+        setTimeout(() => setSaved(null), 2000);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleSlugBlur = async () => {
+    if (slug === originalSlug) return;
+    setSlugError(null);
+
+    // Client-side validation
+    if (!SLUG_REGEX.test(slug) || slug.length < 3 || slug.length > 50) {
+      setSlugError("Must be 3-50 characters, lowercase letters, numbers, and hyphens only");
+      setSlug(originalSlug);
+      return;
+    }
+
+    setSaving("slug");
+    try {
+      const res = await fetch("/api/teams/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, slug }),
+      });
+      if (res.status === 403) { window.location.href = "/app"; return; }
+      if (res.status === 409) {
+        setSlugError("This URL is already taken");
+        setSlug(originalSlug);
+      } else if (res.ok) {
+        setOriginalSlug(slug);
+        setSaved("slug");
+        setTimeout(() => setSaved(null), 2000);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    if (!slugCustomized) {
+      setSlug(slugify(value));
+    }
+  };
+
+  const handleSlugChange = (value: string) => {
+    setSlugCustomized(true);
+    setSlug(value);
+    setSlugError(null);
+  };
+
+  const handleLeave = async () => {
+    setLeavingTeam(true);
+    setLeaveError(null);
+    try {
+      const res = await fetch("/api/teams/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId }),
+      });
+      if (res.status === 403) { window.location.href = "/app"; return; }
+      if (!res.ok) {
+        const data = await res.json();
+        setLeaveError(data.error ?? "Failed to leave team");
+        setLeavingTeam(false);
+        return;
+      }
+      window.location.href = "/app";
+    } catch {
+      setLeaveError("Failed to leave team");
+      setLeavingTeam(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/teams/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, confirmName: deleteInput }),
+      });
+      if (res.status === 403) { window.location.href = "/app"; return; }
+      if (res.ok) {
+        window.location.href = "/app";
+      } else {
+        setDeleting(false);
+      }
+    } catch {
+      setDeleting(false);
+    }
+  };
+
+  // Read-only view for non-owners
+  if (!isOwner) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className="block text-[12px] font-medium text-[#888] mb-1">
+            Team name
+          </label>
+          <div className="border rounded-lg px-3 py-2 text-[13px] text-[#1A1A1A] bg-[#fafaf9]"
+            style={{ borderColor: "rgba(0,0,0,0.06)" }}
+          >
+            {teamName}
+          </div>
+        </div>
+        <div>
+          <label className="block text-[12px] font-medium text-[#888] mb-1">
+            Team URL
+          </label>
+          <div className="border rounded-lg px-3 py-2 text-[13px] text-[#1A1A1A] bg-[#fafaf9]"
+            style={{ borderColor: "rgba(0,0,0,0.06)" }}
+          >
+            {teamSlug}
+          </div>
+        </div>
+
+        {/* Leave team (non-personal only) */}
+        {!isPersonal && (
+          <>
+            <div className="border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
+            {leaveConfirm ? (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[12px] text-[#555]">
+                  Leave {teamName}? You&apos;ll lose access to this workspace.
+                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={handleLeave}
+                    disabled={leavingTeam}
+                    className="px-2.5 py-1 rounded-md text-[12px] font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {leavingTeam ? "Leaving..." : "Leave"}
+                  </button>
+                  <button
+                    onClick={() => { setLeaveConfirm(false); setLeaveError(null); }}
+                    className="px-2.5 py-1 rounded-md text-[12px] font-medium text-[#888] hover:bg-[#f0f0ee] transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setLeaveConfirm(true)}
+                className="flex items-center gap-1.5 text-[13px] font-medium text-red-500 hover:text-red-600 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Leave team
+              </button>
+            )}
+            {leaveError && (
+              <p className="text-[12px] text-red-500 mt-1">{leaveError}</p>
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Owner editable view
   return (
     <div className="space-y-4">
+      {/* Name field */}
       <div>
-        <label className="block text-[12px] font-medium text-[#888] mb-1">
+        <label className="flex items-center gap-1.5 text-[12px] font-medium text-[#888] mb-1">
           Team name
+          {saving === "name" && (
+            <span className="text-[11px] text-[#aaa]">Saving...</span>
+          )}
+          {saved === "name" && (
+            <Check className="w-3 h-3 text-green-500" />
+          )}
         </label>
-        <div className="border rounded-lg px-3 py-2 text-[13px] text-[#1A1A1A] bg-[#fafaf9]"
-          style={{ borderColor: "rgba(0,0,0,0.06)" }}
-        >
-          {teamName}
-        </div>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => handleNameChange(e.target.value)}
+          onBlur={handleNameBlur}
+          className="w-full border rounded-lg px-3 py-2 text-[13px] text-[#1A1A1A] bg-white focus:outline-none focus:ring-1 focus:ring-[#1A1A1A]/20"
+          style={{ borderColor: "rgba(0,0,0,0.1)" }}
+        />
       </div>
+
+      {/* Slug field */}
       <div>
-        <label className="block text-[12px] font-medium text-[#888] mb-1">
+        <label className="flex items-center gap-1.5 text-[12px] font-medium text-[#888] mb-1">
           Team URL
+          {saving === "slug" && (
+            <span className="text-[11px] text-[#aaa]">Saving...</span>
+          )}
+          {saved === "slug" && (
+            <Check className="w-3 h-3 text-green-500" />
+          )}
         </label>
-        <div className="border rounded-lg px-3 py-2 text-[13px] text-[#1A1A1A] bg-[#fafaf9]"
-          style={{ borderColor: "rgba(0,0,0,0.06)" }}
-        >
-          {teamSlug}
-        </div>
+        <input
+          type="text"
+          value={slug}
+          onChange={(e) => handleSlugChange(e.target.value)}
+          onBlur={handleSlugBlur}
+          className={`w-full border rounded-lg px-3 py-2 text-[13px] text-[#1A1A1A] bg-white focus:outline-none focus:ring-1 focus:ring-[#1A1A1A]/20 ${
+            slugError ? "border-red-300" : ""
+          }`}
+          style={slugError ? undefined : { borderColor: "rgba(0,0,0,0.1)" }}
+        />
+        {slugError && (
+          <p className="text-[12px] text-red-500 mt-1">{slugError}</p>
+        )}
+        {slugCustomized && !slugError && (
+          <p className="text-[11px] text-[#aaa] mt-1">
+            Slug was customized and won&apos;t auto-update from name changes.
+          </p>
+        )}
       </div>
+
+      {/* Leave team (non-personal only) */}
+      {!isPersonal && (
+        <>
+          <div className="border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
+          {leaveConfirm ? (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[12px] text-[#555]">
+                Leave {teamName}? You&apos;ll lose access to this workspace.
+              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={handleLeave}
+                  disabled={leavingTeam}
+                  className="px-2.5 py-1 rounded-md text-[12px] font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {leavingTeam ? "Leaving..." : "Leave"}
+                </button>
+                <button
+                  onClick={() => { setLeaveConfirm(false); setLeaveError(null); }}
+                  className="px-2.5 py-1 rounded-md text-[12px] font-medium text-[#888] hover:bg-[#f0f0ee] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setLeaveConfirm(true)}
+              className="flex items-center gap-1.5 text-[13px] font-medium text-red-500 hover:text-red-600 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Leave team
+            </button>
+          )}
+          {leaveError && (
+            <p className="text-[12px] text-red-500 mt-1">{leaveError}</p>
+          )}
+        </>
+      )}
+
+      {/* Delete team danger zone (owner only, non-personal only) */}
+      {!isPersonal && (
+        <>
+          <div className="border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }} />
+          <div className="border border-red-200 rounded-lg p-4">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+              <span className="text-[13px] font-semibold text-red-600">Danger zone</span>
+            </div>
+            <p className="text-[12px] text-[#555] mb-3">
+              Permanently delete {teamName} and all its data. This cannot be undone.
+            </p>
+            {confirmDelete ? (
+              <div className="space-y-2">
+                <p className="text-[12px] text-[#555]">
+                  Type &apos;{teamName}&apos; to confirm deletion
+                </p>
+                <input
+                  type="text"
+                  value={deleteInput}
+                  onChange={(e) => setDeleteInput(e.target.value)}
+                  placeholder={teamName}
+                  className="w-full border rounded-lg px-3 py-2 text-[13px] text-[#1A1A1A] focus:outline-none focus:ring-1 focus:ring-red-200"
+                  style={{ borderColor: "rgba(0,0,0,0.1)" }}
+                  autoFocus
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleteInput !== teamName || deleting}
+                    className="px-3 py-1.5 rounded-lg text-[13px] font-medium bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deleting ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    onClick={() => { setConfirmDelete(false); setDeleteInput(""); }}
+                    className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-[#888] hover:bg-[#f0f0ee] transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="px-3 py-1.5 rounded-lg text-[13px] font-medium bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer"
+              >
+                Delete this team
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
