@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-03-05T02:43:00Z"
-last_activity: "2026-03-05 — Completed 06-03: scope-aware tool aggregation"
+stopped_at: Completed 06-05-PLAN.md
+last_updated: "2026-03-05T03:18:36.005Z"
+last_activity: "2026-03-05 — Completed 06-05: partial error handling guidance in AI tool descriptions"
 progress:
   total_phases: 8
   completed_phases: 5
-  total_plans: 20
-  completed_plans: 20
-  percent: 100
+  total_plans: 22
+  completed_plans: 21
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 6 of 8 (Team-Scoped AI Tools)
-Plan: 3 of 3 in current phase (06-03 complete)
-Status: Phase 6 complete
-Last activity: 2026-03-05 — Completed 06-03: scope-aware tool aggregation with cross-team attribution
+Plan: 5 of 5 in current phase (06-05 complete, gap closure)
+Status: Phase 6 gap closure in progress
+Last activity: 2026-03-05 — Completed 06-05: partial error handling guidance in AI tool descriptions
 
-Progress: [██████████] 100%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [██████████] 100%
 | Phase 06 P01 | 3min | 2 tasks | 10 files |
 | Phase 06 P02 | 4min | 2 tasks | 3 files |
 | Phase 06 P03 | 3min | 2 tasks | 2 files |
+| Phase 06 P05 | 1min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,7 @@ Recent decisions affecting current work:
 - [Phase 06-03]: Used Array<{id, name}> for memberIds so member names are always available in aggregated output
 - [Phase 06-03]: Different attribution patterns per tool type: visibleTo for dedup tools, memberName for flat result tools
 - [Phase 06-03]: Added getPullRequests as explicit tool replacing implicit getMyPRs system prompt reference
+- [Phase 06-05]: Description-only changes to tool definitions -- no logic or schema shape modifications needed since underlying code already handles partial errors correctly
 
 ### Pending Todos
 
@@ -131,6 +133,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T02:43:00Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-03-05T03:18:36.003Z
+Stopped at: Completed 06-05-PLAN.md
 Resume file: None
