@@ -62,6 +62,71 @@ export default async function AppPage() {
       : (linearResult as { error?: string }).error ?? "not_installed",
   };
 
+  // Fetch team member roster with connection status for the active team
+  let teamMembers: Array<{
+    id: string;
+    name: string | null;
+    email: string;
+    avatarUrl: string | null;
+    role: "owner" | "member";
+    connections: { github: string; linear: string };
+  }> = [];
+
+  if (activeTeamId) {
+    const activeTeamOrgId = mappedTeams.find((t) => t.id === activeTeamId)?.workosOrgId ?? null;
+
+    const members = await fullDb
+      .selectFrom("memberships")
+      .innerJoin("users", "users.id", "memberships.user_id")
+      .where("memberships.team_id", "=", activeTeamId)
+      .select([
+        "users.id",
+        "users.name",
+        "users.email",
+        "users.avatar_url",
+        "memberships.role",
+      ])
+      .execute();
+
+    const memberConnectionResults = await Promise.allSettled(
+      members.map(async (member) => {
+        const memberPipeOpts = (provider: string) => ({
+          provider,
+          userId: member.id,
+          ...(activeTeamOrgId ? { organizationId: activeTeamOrgId } : {}),
+        });
+
+        const [ghRes, linearRes] = await Promise.all([
+          workos.pipes
+            .getAccessToken(memberPipeOpts("github"))
+            .catch(() => ({ active: false as const })),
+          workos.pipes
+            .getAccessToken(memberPipeOpts("linear"))
+            .catch(() => ({ active: false as const })),
+        ]);
+
+        return {
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          avatarUrl: member.avatar_url,
+          role: member.role as "owner" | "member",
+          connections: {
+            github: ghRes.active ? "connected" : "not_connected",
+            linear: linearRes.active ? "connected" : "not_connected",
+          },
+        };
+      }),
+    );
+
+    teamMembers = memberConnectionResults
+      .filter(
+        (r): r is PromiseFulfilledResult<(typeof teamMembers)[number]> =>
+          r.status === "fulfilled",
+      )
+      .map((r) => r.value);
+  }
+
   return (
     <AppShell
       userId={user.id}
@@ -72,6 +137,7 @@ export default async function AppPage() {
       activeTeamId={activeTeamId}
       teams={mappedTeams}
       connectionStatus={connectionStatus}
+      teamMembers={teamMembers}
     />
   );
 }

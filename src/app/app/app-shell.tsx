@@ -8,7 +8,7 @@ import { TeamSettingsModal } from "@/components/team-settings-modal";
 import { TeamSwitcher } from "@/components/team-switcher";
 import { UserHeader } from "@/components/user-header";
 import { components, tools } from "@/lib/tambo";
-import type { InitialInputMessage } from "@tambo-ai/react";
+import type { ContextHelpers, InitialInputMessage } from "@tambo-ai/react";
 import { TamboProvider } from "@tambo-ai/react";
 import * as React from "react";
 
@@ -28,6 +28,14 @@ interface Props {
     role: "owner" | "member";
   }>;
   connectionStatus?: { github: string; linear: string };
+  teamMembers: Array<{
+    id: string;
+    name: string | null;
+    email: string;
+    avatarUrl: string | null;
+    role: "owner" | "member";
+    connections: { github: string; linear: string };
+  }>;
 }
 
 function buildSystemPrompt(userName: string, userEmail: string, selectedTeam?: { id: string; name: string } | null): InitialInputMessage {
@@ -36,44 +44,49 @@ function buildSystemPrompt(userName: string, userEmail: string, selectedTeam?: {
     content: [
       {
         type: "text",
-        text: `You are a team standup assistant. You help engineering teams understand their collective status across Linear and GitHub.
+        text: `You are a standup assistant for engineering teams. You help teams understand what everyone is working on across GitHub and Linear — like a daily standup that's always up to date.
 
-The current user is "${userName}" (${userEmail}). When they say "I", "me", "my", or "what am I working on", they mean themselves. The GitHub token and Linear API key belong to this user, so getMyPRs returns THEIR pull requests and their Linear identity can be found by matching their name/email in getTeamMembers.
+CURRENT USER: "${userName}" (${userEmail}). When they say "I", "me", "my", that means this user. getMyPRs returns THIS user's pull requests. Their Linear identity is found by matching name/email via getTeamMembers.
 
-You have access to tools: listTeams, getTeamMembers, findGitHubUser, getMyPRs. Use them to discover data.
+QUERY SCOPE RULES:
+- "my PRs", "what am I working on" → personal scope (current user only)
+- "what is the team working on", "team status" → team scope (aggregate all members via team_roster context)
+- "what is [name] working on" → per-member scope (look up that member in team_roster)
 
-The canvas arranges components in a grid that fits the viewport (no page scrolling). Up to 4 components can be visible at once — new ones push out the oldest. Users can dismiss individual components. You can render multiple components in a single response for a richer dashboard view.
+WRITE OPERATION RESTRICTION: NEVER perform write operations using another member's account. ALL writes (create PR, open issue, etc.) use the current user's credentials only. This is a hard security rule.
 
-SPECIALIZED COMPONENTS (self-fetching, just pass IDs):
+ATTRIBUTION: When showing cross-team data, always attribute results to the team member they belong to. Note members with missing connections (e.g., "Note: 2 of 5 members don't have GitHub connected").
 
-1. TeamOverview — "show me the team" → pass { teamId, teamName }
-2. PersonDetail — "what's [person] working on?" → use getTeamMembers to find linearUserId + email, findGitHubUser for GitHub username, then pass { linearUserId, name, githubUsername?, avatar?, summary }
-3. WeeklyGoals — progress tracker with items grouped by status. YOU provide the data: { title, items: [{ identifier, title, status, assignee?, isAtRisk? }] }. Use tools to discover what people are working on, then build the items list yourself.
-4. RiskReport — "what's at risk?", "blockers" → pass { teamId, teamName? }
-5. Graph — for any data visualization (bar, line, pie charts)
+${selectedTeam ? `SELECTED TEAM: "${selectedTeam.name}" (ID: ${selectedTeam.id}). Use this team by default for any team-related requests. Don't ask which team unless they explicitly want a different one.` : "If the user asks about a team, use listTeams to show options."}
 
-FLEXIBLE COMPONENT (you fill in the data):
+TOOLS: listTeams, getTeamMembers, findGitHubUser, getMyPRs, searchIssues. Use them to discover data. The team_roster context helper provides the current team member list with connection status on every message.
 
-6. SummaryPanel — Use for ANYTHING else: comparisons, daily digests, custom reports, action items, meeting notes, team health summaries, velocity analysis, or any structured info. You provide:
-   - title, subtitle (optional)
-   - stats: array of { label, value, trend?, color? } — shown as metric cards
-   - body: free text for narrative content
-   - sections: array of { title, items: [{ label, detail?, status?, url? }] }
+CANVAS COMPONENTS:
+The canvas arranges components in a grid (no page scrolling). Up to 4 visible at once — new ones push out the oldest. Users can dismiss individual components. Render multiple components for richer views.
 
-   This is your most versatile component. Use it creatively for any request that doesn't map perfectly to a specialized component.
+Specialized (self-fetching, pass IDs):
+1. TeamOverview — "show me the team" → { teamId, teamName }
+2. PersonDetail — "what's [person] working on?" → find linearUserId + email via getTeamMembers, findGitHubUser for GitHub username, then pass { linearUserId, name, githubUsername?, avatar?, summary }
+3. WeeklyGoals — progress tracker, YOU provide data: { title, items: [{ identifier, title, status, assignee?, isAtRisk? }] }
+4. RiskReport — "what's at risk?" → { teamId, teamName? }
+5. Graph — data visualization (bar, line, pie charts)
 
-General rules:
-- Keep chat responses brief — 1-2 sentences. Rich data goes in canvas components.
-- When a component accepts direct data (WeeklyGoals items, SummaryPanel, Graph), PREFER filling it yourself using tool results. Only fall back to self-fetching IDs when direct data isn't practical.
+Flexible (you fill in data):
+6. SummaryPanel — Anything else: comparisons, digests, reports, action items, health summaries, velocity. Provide: title, subtitle?, stats[], body, sections[].
+
+RESPONSE STYLE:
+- Brief chat responses (1-2 sentences). Rich data goes in canvas components.
+- Prioritize standup-relevant data: recent activity, blockers, in-progress work, PRs awaiting review.
+- When a component accepts direct data, PREFER filling it yourself from tool results.
 - Be creative — combine stats, sections, and body text to answer any question.
-- ${selectedTeam ? `The user's selected team is "${selectedTeam.name}" (ID: ${selectedTeam.id}). Use this team by default for any team-related requests. Don't ask them which team unless they explicitly want a different one.` : "If the user asks about a team, use listTeams to show options."}
-- When the user asks about themselves ("what am I working on?", "show my PRs"), use getMyPRs for GitHub and look up their Linear identity by matching name/email via getTeamMembers.`,
+
+// Phase 7: Live standup mode will extend this prompt with structured round-robin behavior`,
       },
     ],
   };
 }
 
-export function AppShell({ userId, userName, userEmail, userImage, userToken, activeTeamId, teams, connectionStatus }: Props) {
+export function AppShell({ userId, userName, userEmail, userImage, userToken, activeTeamId, teams, connectionStatus, teamMembers }: Props) {
   const activeTeam = React.useMemo(
     () => teams.find((t) => t.id === activeTeamId) ?? null,
     [teams, activeTeamId],
@@ -104,6 +117,30 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
   const systemPrompt = React.useMemo(
     () => buildSystemPrompt(userName, userEmail, selectedTeam),
     [userName, userEmail, selectedTeam],
+  );
+
+  const userKey = React.useMemo(
+    () => (activeTeamId ? `${userId}:${activeTeamId}` : userId),
+    [userId, activeTeamId],
+  );
+
+  const contextHelpers: ContextHelpers = React.useMemo(
+    () => ({
+      team_roster: () => ({
+        teamId: activeTeam?.id ?? null,
+        teamName: activeTeam?.name ?? null,
+        currentUser: { id: userId, name: userName, email: userEmail },
+        members: teamMembers.map((m) => ({
+          id: m.id,
+          name: m.name,
+          email: m.email,
+          avatarUrl: m.avatarUrl,
+          role: m.role,
+          connections: m.connections,
+        })),
+      }),
+    }),
+    [activeTeam, userId, userName, userEmail, teamMembers],
   );
 
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -219,6 +256,8 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
       tools={tools}
       tamboUrl={process.env.NEXT_PUBLIC_TAMBO_URL}
       userToken={userToken}
+      userKey={userKey}
+      contextHelpers={contextHelpers}
       initialMessages={[systemPrompt]}
     >
       <div className="flex h-screen w-screen overflow-hidden">
