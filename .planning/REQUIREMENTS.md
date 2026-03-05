@@ -48,8 +48,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **AI-01**: AI system prompt is rebuilt from server-side team and connection data (not localStorage)
 - [x] **AI-02**: AI tools use WorkOS Pipes token lookup per member for read operations
-- [ ] **AI-03**: AI can answer "what is the team working on" by aggregating across all members' connections
-- [ ] **AI-04**: AI results from cross-team queries include attribution (which member each result belongs to)
+- [x] **AI-03**: AI can answer "what is the team working on" by aggregating across all members' connections
+- [x] **AI-04**: AI results from cross-team queries include attribution (which member each result belongs to)
 - [x] **AI-05**: Write operations (create PR, open issue) use only the requesting user's connection
 - [x] **AI-06**: Each user retains their own personal conversation threads
 
@@ -130,8 +130,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 2 | Complete |
 | AI-01 | Phase 6 | Complete |
 | AI-02 | Phase 6 | Complete |
-| AI-03 | Phase 6 | Pending |
-| AI-04 | Phase 6 | Pending |
+| AI-03 | Phase 6 | Complete |
+| AI-04 | Phase 6 | Complete |
 | AI-05 | Phase 6 | Complete |
 | AI-06 | Phase 6 | Complete |
 | LIVE-01 | Phase 7 | Pending |
