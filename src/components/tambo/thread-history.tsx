@@ -37,6 +37,8 @@ interface ThreadHistoryContextValue {
   isCollapsed: boolean;
   setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   onThreadChange?: () => void;
+  onCreateThread?: () => Promise<string | void>;
+  userKey?: string;
   position?: "left" | "right";
 }
 
@@ -58,6 +60,8 @@ const useThreadHistoryContext = () => {
  */
 interface ThreadHistoryProps extends React.HTMLAttributes<HTMLDivElement> {
   onThreadChange?: () => void;
+  onCreateThread?: () => Promise<string | void>;
+  userKey?: string;
   children?: React.ReactNode;
   defaultCollapsed?: boolean;
   position?: "left" | "right";
@@ -68,6 +72,8 @@ const ThreadHistory = React.forwardRef<HTMLDivElement, ThreadHistoryProps>(
     {
       className,
       onThreadChange,
+      onCreateThread,
+      userKey,
       defaultCollapsed = true,
       position = "left",
       children,
@@ -79,7 +85,9 @@ const ThreadHistory = React.forwardRef<HTMLDivElement, ThreadHistoryProps>(
     const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
     const [shouldFocusSearch, setShouldFocusSearch] = React.useState(false);
 
-    const { data: threads, isLoading, error, refetch } = useTamboThreadList();
+    const { data: threads, isLoading, error, refetch } = useTamboThreadList(
+      userKey ? { userKey } : undefined,
+    );
 
     const { switchThread, startNewThread, currentThreadId, updateThreadName } = useTambo();
 
@@ -114,6 +122,8 @@ const ThreadHistory = React.forwardRef<HTMLDivElement, ThreadHistoryProps>(
         isCollapsed,
         setIsCollapsed,
         onThreadChange,
+        onCreateThread,
+        userKey,
         position,
       }),
       [
@@ -128,6 +138,8 @@ const ThreadHistory = React.forwardRef<HTMLDivElement, ThreadHistoryProps>(
         searchQuery,
         isCollapsed,
         onThreadChange,
+        onCreateThread,
+        userKey,
         position,
       ],
     );
@@ -222,7 +234,7 @@ const ThreadHistoryNewButton = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement>
 >(({ ...props }, ref) => {
-  const { isCollapsed, startNewThread, refetch, onThreadChange } =
+  const { isCollapsed, startNewThread, refetch, onThreadChange, onCreateThread } =
     useThreadHistoryContext();
 
   const handleNewThread = React.useCallback(
@@ -230,14 +242,18 @@ const ThreadHistoryNewButton = React.forwardRef<
       if (e) e.stopPropagation();
 
       try {
-        startNewThread();
+        if (onCreateThread) {
+          await onCreateThread();
+        } else {
+          startNewThread();
+        }
         await refetch();
         onThreadChange?.();
       } catch (error) {
         console.error("Failed to create new thread:", error);
       }
     },
-    [startNewThread, refetch, onThreadChange],
+    [startNewThread, refetch, onThreadChange, onCreateThread],
   );
 
   React.useEffect(() => {

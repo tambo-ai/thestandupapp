@@ -9,7 +9,7 @@ import { TeamSwitcher } from "@/components/team-switcher";
 import { UserHeader } from "@/components/user-header";
 import { components, tools } from "@/lib/tambo";
 import type { ContextHelpers, InitialInputMessage } from "@tambo-ai/react";
-import { TamboProvider } from "@tambo-ai/react";
+import { TamboProvider, useTambo } from "@tambo-ai/react";
 import * as React from "react";
 
 interface Props {
@@ -97,6 +97,14 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
     [activeTeam],
   );
 
+  const tamboUserKey = React.useMemo(
+    () =>
+      activeTeamId && activeTeam && !activeTeam.isPersonal
+        ? `${userId}:${activeTeamId}`
+        : userId,
+    [userId, activeTeamId, activeTeam],
+  );
+
   const [settingsOpen, setSettingsOpen] = React.useState(false);
 
   // Toast notification for removed members
@@ -117,11 +125,6 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
   const systemPrompt = React.useMemo(
     () => buildSystemPrompt(userName, userEmail, selectedTeam),
     [userName, userEmail, selectedTeam],
-  );
-
-  const userKey = React.useMemo(
-    () => (activeTeamId ? `${userId}:${activeTeamId}` : userId),
-    [userId, activeTeamId],
   );
 
   const contextHelpers: ContextHelpers = React.useMemo(
@@ -256,7 +259,6 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
       tools={tools}
       tamboUrl={process.env.NEXT_PUBLIC_TAMBO_URL}
       userToken={userToken}
-      userKey={userKey}
       contextHelpers={contextHelpers}
       initialMessages={[systemPrompt]}
     >
@@ -285,7 +287,11 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
             <ConnectionPrompt onOpenModal={() => setModalOpen(true)} />
           )}
           <div className="flex-1 min-h-0">
-            <MessageThreadFull />
+            <TeamScopedThreadArea
+              tamboUserKey={tamboUserKey}
+              activeTeamId={activeTeamId}
+              isPersonal={activeTeam?.isPersonal ?? true}
+            />
           </div>
           <div
             onMouseDown={onDragStart}
@@ -319,5 +325,43 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
         </div>
       )}
     </TamboProvider>
+  );
+}
+
+/** Inner component that uses useTambo() inside TamboProvider for thread creation */
+function TeamScopedThreadArea({
+  tamboUserKey,
+  activeTeamId,
+  isPersonal,
+}: {
+  tamboUserKey: string;
+  activeTeamId?: string | null;
+  isPersonal: boolean;
+}) {
+  const { initThread } = useTambo();
+
+  const handleCreateThread = React.useCallback(async () => {
+    const res = await fetch("/api/tambo/threads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        teamId: isPersonal ? undefined : activeTeamId,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to create thread");
+    }
+
+    const { id } = await res.json();
+    initThread(id);
+    return id as string;
+  }, [activeTeamId, isPersonal, initThread]);
+
+  return (
+    <MessageThreadFull
+      userKey={tamboUserKey}
+      onCreateThread={handleCreateThread}
+    />
   );
 }
