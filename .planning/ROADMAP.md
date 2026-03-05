@@ -117,7 +117,7 @@ Plans:
   3. Write operations (open issue, create PR) use only the requesting user's own token — never another member's
   4. Each user's conversation history is private to them and persists independently across sessions
   5. The AI system prompt reflects current team membership and connection data from the server, not from localStorage
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 Plans:
 - [ ] 06-01-PLAN.md — W1: Cross-member token wrappers (withGitHubTokenForUser, withLinearClientForUser), team context helper, update all read API routes
 - [ ] 06-02-PLAN.md — W1: Server-side team roster in page.tsx, contextHelpers + composite userKey in AppShell, thread name display
@@ -159,6 +159,6 @@ Note: Phase 3 (Pipes) and Phase 4 (Team Formation) both depend on Phase 2 but no
 | 3. WorkOS Pipes Connections | 4/4 | Complete   | 2026-03-04 |
 | 4. Team Formation | 4/4 | Complete   | 2026-03-04 |
 | 5. Team Owner Controls | 1/3 | In Progress|  |
-| 6. Team-Scoped AI Tools | 0/3 | Not started | - |
+| 6. Team-Scoped AI Tools | 2/3 | In Progress|  |
 | 7. Live Standup Sessions | 0/? | Not started | - |
 | 8. Driver Control and Summary | 0/? | Not started | - |
