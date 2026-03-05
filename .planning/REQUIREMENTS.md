@@ -33,10 +33,10 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TEAM-03**: User can invite team members via shareable invite link
 - [x] **TEAM-04**: Invited user can accept invitation and join the team
 - [x] **TEAM-05**: User can view all team members
-- [ ] **TEAM-06**: User can leave a team
-- [ ] **TEAM-07**: Workspace owner can remove a team member
-- [ ] **TEAM-08**: Workspace owner can view pending invitations
-- [ ] **TEAM-09**: Workspace owner can resend or revoke a pending invitation
+- [x] **TEAM-06**: User can leave a team
+- [x] **TEAM-07**: Workspace owner can remove a team member
+- [x] **TEAM-08**: Workspace owner can view pending invitations
+- [x] **TEAM-09**: Workspace owner can resend or revoke a pending invitation
 
 ### Database
 
@@ -121,10 +121,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEAM-03 | Phase 4 | Complete |
 | TEAM-04 | Phase 4 | Complete |
 | TEAM-05 | Phase 4 | Complete |
-| TEAM-06 | Phase 5 | Pending |
-| TEAM-07 | Phase 5 | Pending |
-| TEAM-08 | Phase 5 | Pending |
-| TEAM-09 | Phase 5 | Pending |
+| TEAM-06 | Phase 5 | Complete |
+| TEAM-07 | Phase 5 | Complete |
+| TEAM-08 | Phase 5 | Complete |
+| TEAM-09 | Phase 5 | Complete |
 | DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Complete |
 | DATA-03 | Phase 2 | Complete |

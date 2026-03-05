@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-03-04T23:07:24Z"
+status: completed
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-05T00:40:40.751Z"
 last_activity: "2026-03-04 — Completed 04-04: team settings modal and auth callback enhancement"
 progress:
   total_phases: 8
-  completed_phases: 3
-  total_plans: 14
-  completed_plans: 14
+  completed_phases: 4
+  total_plans: 17
+  completed_plans: 15
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** A team can see what everyone is working on across GitHub and Linear through a single AI-powered conversation, without anyone manually writing status updates
-**Current focus:** Phase 4 in progress — executing Team Formation plans
+**Current focus:** Phase 5 in progress — executing Team Owner Controls plans
 
 ## Current Position
 
-Phase: 4 of 8 (Team Formation) -- COMPLETE
-Plan: 4 of 4 in current phase (04-04 complete)
-Status: Phase 4 complete
-Last activity: 2026-03-04 — Completed 04-04: team settings modal and auth callback enhancement
+Phase: 5 of 8 (Team Owner Controls)
+Plan: 1 of 3 in current phase (05-01 complete)
+Status: Executing phase 5
+Last activity: 2026-03-05 — Completed 05-01: team owner controls API routes
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 04 P02 | 2min | 2 tasks | 6 files |
 | Phase 04 P03 | 4min | 3 tasks | 7 files |
 | Phase 04 P04 | 2min | 2 tasks | 3 files |
+| Phase 05 P01 | 2min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,9 @@ Recent decisions affecting current work:
 - [Phase 04-03]: Used teamSwitcherSlot ReactNode prop on UserHeader to keep the component generic while integrating the team switcher
 - [Phase 04-03]: Derived activeTeam from teams array in AppShell instead of passing separate activeTeamName prop
 - [Phase 04-03]: Split invite page into server component for SSR validation and client component for interactive join
+- [Phase 05]: Used getFullDb() for all routes since they operate across teams/memberships/invite_links tables
+- [Phase 05]: WorkOS calls wrapped in try/catch -- local DB is source of truth, WorkOS sync is best-effort
+- [Phase 05]: Link revocation auto-regenerates a new link to ensure there is always an active invite link
 
 ### Pending Todos
 
@@ -110,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T23:07:24Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-03-05T00:40:40.749Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
