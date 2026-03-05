@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05-01-PLAN.md
+stopped_at: Completed 05-02-PLAN.md
 last_updated: "2026-03-05T00:40:40.751Z"
 last_activity: "2026-03-04 — Completed 04-04: team settings modal and auth callback enhancement"
 progress:
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 5 of 8 (Team Owner Controls)
-Plan: 1 of 3 in current phase (05-01 complete)
+Plan: 2 of 3 in current phase (05-02 complete)
 Status: Executing phase 5
-Last activity: 2026-03-05 — Completed 05-01: team owner controls API routes
+Last activity: 2026-03-05 — Completed 05-02: members tab overhaul with action menus
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [█████████░] 88%
 | Phase 04 P03 | 4min | 3 tasks | 7 files |
 | Phase 04 P04 | 2min | 2 tasks | 3 files |
 | Phase 05 P01 | 2min | 2 tasks | 5 files |
+| Phase 05 P02 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,8 @@ Recent decisions affecting current work:
 - [Phase 05]: Used getFullDb() for all routes since they operate across teams/memberships/invite_links tables
 - [Phase 05]: WorkOS calls wrapped in try/catch -- local DB is source of truth, WorkOS sync is best-effort
 - [Phase 05]: Link revocation auto-regenerates a new link to ensure there is always an active invite link
+- [Phase 05-02]: Combined relativeTime helper inline in modal file rather than extracting to utils -- keeps the component self-contained
+- [Phase 05-02]: Used summary line inside tab content instead of modifying tab label -- avoids prop-drilling complexity
 
 ### Pending Todos
 
@@ -114,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-05T00:40:40.749Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-05T00:44:27Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
