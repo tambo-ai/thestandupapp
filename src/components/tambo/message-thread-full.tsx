@@ -33,19 +33,17 @@ import * as React from "react";
 
 export interface MessageThreadFullProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: VariantProps<typeof messageVariants>["variant"];
-  userKey?: string;
-  onCreateThread?: () => Promise<string | void>;
 }
 
 export const MessageThreadFull = React.forwardRef<
   HTMLDivElement,
   MessageThreadFullProps
->(({ className, variant, userKey, onCreateThread, ...props }, ref) => {
+>(({ className, variant, ...props }, ref) => {
   const { containerRef, historyPosition } = useThreadContainerContext();
   const mergedRef = useMergeRefs<HTMLDivElement | null>(ref, containerRef);
 
   const threadHistorySidebar = (
-    <ThreadHistory position={historyPosition} userKey={userKey} onCreateThread={onCreateThread}>
+    <ThreadHistory position={historyPosition}>
       <ThreadHistoryHeader />
       <ThreadHistoryNewButton />
       <ThreadHistorySearch />

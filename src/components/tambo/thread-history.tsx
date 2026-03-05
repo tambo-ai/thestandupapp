@@ -86,6 +86,9 @@ const ThreadHistory = React.forwardRef<HTMLDivElement, ThreadHistoryProps>(
     const [shouldFocusSearch, setShouldFocusSearch] = React.useState(false);
 
     const { data: threads, isLoading, error, refetch } = useTamboThreadList();
+    // Note: userKey-based thread isolation removed — TamboProvider cannot accept
+    // both userKey and userToken simultaneously (SDK constraint). All threads
+    // are shown regardless of team. Thread isolation requires Tambo SDK support.
 
     const { switchThread, startNewThread, currentThreadId, updateThreadName } = useTambo();
 
@@ -374,7 +377,6 @@ const ThreadHistoryList = React.forwardRef<
     updateThreadName,
     refetch,
     onThreadChange,
-    userKey,
   } = useThreadHistoryContext();
 
   const [editingThread, setEditingThread] =
@@ -416,25 +418,20 @@ const ThreadHistoryList = React.forwardRef<
     }
   };
 
-  // Filter threads based on userKey (team scoping) and search query
+  // Filter threads based on search query
   const filteredThreads = useMemo(() => {
     // While collapsed we do not need the list, avoid extra work.
     if (isCollapsed) return [];
 
     if (!threads?.threads) return [];
 
-    // First filter by userKey for team isolation
-    const teamThreads = userKey
-      ? threads.threads.filter((thread: ThreadListItem) => thread.userKey === userKey)
-      : threads.threads;
-
     const query = searchQuery.toLowerCase();
-    return teamThreads.filter((thread: ThreadListItem) => {
+    return threads.threads.filter((thread: ThreadListItem) => {
       const idMatches = thread.id.toLowerCase().includes(query);
       const nameMatches = thread.name?.toLowerCase().includes(query) ?? false;
       return idMatches || nameMatches;
     });
-  }, [isCollapsed, threads, searchQuery, userKey]);
+  }, [isCollapsed, threads, searchQuery]);
 
   const handleSwitchThread = async (threadId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
