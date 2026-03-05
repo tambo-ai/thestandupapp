@@ -85,9 +85,7 @@ const ThreadHistory = React.forwardRef<HTMLDivElement, ThreadHistoryProps>(
     const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
     const [shouldFocusSearch, setShouldFocusSearch] = React.useState(false);
 
-    const { data: threads, isLoading, error, refetch } = useTamboThreadList(
-      userKey ? { userKey } : undefined,
-    );
+    const { data: threads, isLoading, error, refetch } = useTamboThreadList();
 
     const { switchThread, startNewThread, currentThreadId, updateThreadName } = useTambo();
 
@@ -376,6 +374,7 @@ const ThreadHistoryList = React.forwardRef<
     updateThreadName,
     refetch,
     onThreadChange,
+    userKey,
   } = useThreadHistoryContext();
 
   const [editingThread, setEditingThread] =
@@ -417,20 +416,25 @@ const ThreadHistoryList = React.forwardRef<
     }
   };
 
-  // Filter threads based on search query
+  // Filter threads based on userKey (team scoping) and search query
   const filteredThreads = useMemo(() => {
     // While collapsed we do not need the list, avoid extra work.
     if (isCollapsed) return [];
 
     if (!threads?.threads) return [];
 
+    // First filter by userKey for team isolation
+    const teamThreads = userKey
+      ? threads.threads.filter((thread: ThreadListItem) => thread.userKey === userKey)
+      : threads.threads;
+
     const query = searchQuery.toLowerCase();
-    return threads.threads.filter((thread: ThreadListItem) => {
+    return teamThreads.filter((thread: ThreadListItem) => {
       const idMatches = thread.id.toLowerCase().includes(query);
       const nameMatches = thread.name?.toLowerCase().includes(query) ?? false;
       return idMatches || nameMatches;
     });
-  }, [isCollapsed, threads, searchQuery]);
+  }, [isCollapsed, threads, searchQuery, userKey]);
 
   const handleSwitchThread = async (threadId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
