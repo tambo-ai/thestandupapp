@@ -1,4 +1,4 @@
-import { withLinearClient } from "@/lib/linear-client";
+import { withLinearClientForUser } from "@/lib/linear-client";
 import { NextResponse } from "next/server";
 
 /**
@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
  *
  * @returns Array of issues with identifier, title, url, priority, status, assignee, and labelIds.
  */
-export const GET = withLinearClient(async (linear, request) => {
+export const GET = withLinearClientForUser(async (linear, request) => {
   const { searchParams } = new URL(request.url);
   const term = searchParams.get("query");
   const first = Math.min(Number(searchParams.get("first") ?? 20), 50);

@@ -1,4 +1,4 @@
-import { withLinearClient } from "@/lib/linear-client";
+import { withLinearClientForUser } from "@/lib/linear-client";
 import type { Cycle, Issue } from "@linear/sdk";
 import { NextResponse } from "next/server";
 
@@ -56,7 +56,7 @@ async function formatCycle(cycle: Cycle) {
  *
  * @returns `{ cycleId, cycleName, dateRange, totalItems, completedItems, items }`
  */
-export const GET = withLinearClient(async (linear, request) => {
+export const GET = withLinearClientForUser(async (linear, request) => {
   const { searchParams } = new URL(request.url);
   const cycleId = searchParams.get("id");
   const teamId = searchParams.get("teamId");

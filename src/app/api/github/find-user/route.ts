@@ -1,4 +1,4 @@
-import { GITHUB_API, ghHeaders, withGitHubToken } from "@/lib/github-client";
+import { GITHUB_API, ghHeaders, withGitHubTokenForUser } from "@/lib/github-client";
 import { NextResponse } from "next/server";
 
 /** Simple fuzzy name match: check if query words appear in target string. */
@@ -26,7 +26,7 @@ function mapUsers(items: { login: string; avatar_url: string; name?: string }[])
   }));
 }
 
-export const GET = withGitHubToken(async (token, request) => {
+export const GET = withGitHubTokenForUser(async (token, request) => {
   const { searchParams } = new URL(request.url);
   const email = searchParams.get("email");
   const name = searchParams.get("name");

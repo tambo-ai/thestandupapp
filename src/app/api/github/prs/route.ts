@@ -1,4 +1,4 @@
-import { GITHUB_API, ghHeaders, resolveGitHubLogin, withGitHubToken } from "@/lib/github-client";
+import { GITHUB_API, ghHeaders, resolveGitHubLogin, withGitHubTokenForUser } from "@/lib/github-client";
 import { NextResponse } from "next/server";
 
 type PrState = "open" | "closed" | "merged" | "draft";
@@ -10,7 +10,7 @@ function resolvePrState(mergedAt: string | null | undefined, draft: boolean | un
   return "closed";
 }
 
-export const GET = withGitHubToken(async (token, request) => {
+export const GET = withGitHubTokenForUser(async (token, request) => {
   const { searchParams } = new URL(request.url);
   const owner = searchParams.get("owner");
   const repo = searchParams.get("repo");
