@@ -162,6 +162,23 @@ export default async function middleware(request: NextRequest) {
       if (membership) {
         hasValidActiveTeam = true;
       } else {
+        // Check if the team was non-personal (user was removed from a real team)
+        const removedTeam = await fullDb
+          .selectFrom('teams')
+          .where('teams.id', '=', activeTeamId)
+          .select(['teams.name', 'teams.is_personal'])
+          .executeTakeFirst();
+
+        if (removedTeam && removedTeam.is_personal === 0) {
+          // Set a notification cookie so AppShell can show a toast
+          response.cookies.set('removed_from_team', removedTeam.name, {
+            httpOnly: false, // Client-side readable
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60, // 1 minute -- just needs to survive the redirect
+          });
+        }
+
         // Clear invalid cookie
         response.cookies.delete('active_team_id');
       }

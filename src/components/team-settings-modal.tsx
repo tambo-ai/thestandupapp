@@ -739,12 +739,17 @@ function MembersTab({
   const [leavingTeam, setLeavingTeam] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
+  // If any fetch returns 403, the user was removed -- redirect to /app
   const refetchAll = React.useCallback(async () => {
     try {
       const [membersRes, invitationsRes] = await Promise.all([
         fetch(`/api/teams/members?teamId=${teamId}`),
         fetch(`/api/teams/invitations?teamId=${teamId}`),
       ]);
+      if (membersRes.status === 403 || invitationsRes.status === 403) {
+        window.location.href = "/app";
+        return;
+      }
       const membersData: { members: MemberData[] } = await membersRes.json();
       const invData: { invitations: InvitationData[] } = await invitationsRes.json();
 

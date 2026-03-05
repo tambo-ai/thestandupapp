@@ -86,6 +86,21 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
 
   const [settingsOpen, setSettingsOpen] = React.useState(false);
 
+  // Toast notification for removed members
+  const [toast, setToast] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    // Read removed_from_team cookie
+    const match = document.cookie.match(/(?:^|;\s*)removed_from_team=([^;]*)/);
+    if (match) {
+      const teamNameValue = decodeURIComponent(match[1]);
+      // Clear the cookie immediately
+      document.cookie = "removed_from_team=; path=/; max-age=0";
+      setToast(`You were removed from ${teamNameValue}`);
+      setTimeout(() => setToast(null), 5000);
+    }
+  }, []);
+
   const systemPrompt = React.useMemo(
     () => buildSystemPrompt(userName, userEmail, selectedTeam),
     [userName, userEmail, selectedTeam],
@@ -259,6 +274,11 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
         isOwner={activeTeam?.role === "owner"}
         userId={userId}
       />
+      {toast && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-[#1A1A1A] text-white text-[13px] px-4 py-2.5 rounded-lg shadow-lg">
+          {toast}
+        </div>
+      )}
     </TamboProvider>
   );
 }
