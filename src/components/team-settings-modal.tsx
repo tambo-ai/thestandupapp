@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Link, Mail, RefreshCw, Users, X } from "lucide-react";
+import { Copy, Link, LogOut, Mail, MoreVertical, RefreshCw, User, Users, X } from "lucide-react";
 import * as React from "react";
 import { createPortal } from "react-dom";
 
@@ -12,6 +12,7 @@ interface TeamSettingsModalProps {
   teamSlug: string;
   isPersonal: boolean;
   isOwner: boolean;
+  userId: string;
 }
 
 type Tab = "general" | "invite" | "members";
@@ -30,6 +31,36 @@ interface MemberData {
   role: "owner" | "member";
 }
 
+interface InvitationData {
+  id: string;
+  type: "email" | "link";
+  email?: string;
+  useCount?: number;
+  invitedBy: string;
+  createdAt: string;
+  token?: string;
+  url?: string;
+}
+
+function relativeTime(dateString: string): string {
+  const now = Date.now();
+  const then = new Date(dateString).getTime();
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffMin < 1) return "just now";
+  if (diffHr < 1) return `${diffMin} minute${diffMin !== 1 ? "s" : ""} ago`;
+  if (diffDay < 1) return `${diffHr} hour${diffHr !== 1 ? "s" : ""} ago`;
+  if (diffDay < 7) return `${diffDay} day${diffDay !== 1 ? "s" : ""} ago`;
+
+  const d = new Date(dateString);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${months[d.getMonth()]} ${d.getDate()}`;
+}
+
 export function TeamSettingsModal({
   isOpen,
   onClose,
@@ -38,6 +69,7 @@ export function TeamSettingsModal({
   teamSlug,
   isPersonal,
   isOwner,
+  userId,
 }: TeamSettingsModalProps) {
   const [activeTab, setActiveTab] = React.useState<Tab>("general");
 
@@ -119,7 +151,7 @@ export function TeamSettingsModal({
           {activeTab === "invite" && (
             <InviteTab teamId={teamId} isOwner={isOwner} />
           )}
-          {activeTab === "members" && <MembersTab teamId={teamId} />}
+          {activeTab === "members" && <MembersTab teamId={teamId} userId={userId} isOwner={isOwner} teamName={teamName} />}
         </div>
       </div>
     </div>
@@ -340,28 +372,165 @@ function InviteTab({
 
 /* ── Members Tab ─────────────────────────────────────────────── */
 
-function MembersTab({ teamId }: { teamId: string }) {
+function MembersTab({
+  teamId,
+  userId,
+  isOwner,
+  teamName,
+}: {
+  teamId: string;
+  userId: string;
+  isOwner: boolean;
+  teamName: string;
+}) {
   const [members, setMembers] = React.useState<MemberData[]>([]);
+  const [invitations, setInvitations] = React.useState<InvitationData[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [removingId, setRemovingId] = React.useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = React.useState<string | null>(null);
+  const [confirmingLeave, setConfirmingLeave] = React.useState(false);
+  const [menuOpenId, setMenuOpenId] = React.useState<string | null>(null);
+  const [resentId, setResentId] = React.useState<string | null>(null);
+  const [copiedId, setCopiedId] = React.useState<string | null>(null);
+  const [leaveError, setLeaveError] = React.useState<string | null>(null);
+  const [leavingTeam, setLeavingTeam] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  const refetchAll = React.useCallback(async () => {
+    try {
+      const [membersRes, invitationsRes] = await Promise.all([
+        fetch(`/api/teams/members?teamId=${teamId}`),
+        fetch(`/api/teams/invitations?teamId=${teamId}`),
+      ]);
+      const membersData: { members: MemberData[] } = await membersRes.json();
+      const invData: { invitations: InvitationData[] } = await invitationsRes.json();
+
+      const sorted = [...membersData.members].sort((a, b) => {
+        if (a.role === "owner" && b.role !== "owner") return -1;
+        if (a.role !== "owner" && b.role === "owner") return 1;
+        const aName = a.name ?? a.email;
+        const bName = b.name ?? b.email;
+        return aName.localeCompare(bName);
+      });
+      setMembers(sorted);
+      setInvitations(invData.invitations ?? []);
+    } catch {
+      // Keep existing state on error
+    }
+  }, [teamId]);
 
   React.useEffect(() => {
     setLoading(true);
-    fetch(`/api/teams/members?teamId=${teamId}`)
-      .then((r) => r.json())
-      .then((data: { members: MemberData[] }) => {
-        // Sort: owners first, then alphabetical by name
-        const sorted = [...data.members].sort((a, b) => {
-          if (a.role === "owner" && b.role !== "owner") return -1;
-          if (a.role !== "owner" && b.role === "owner") return 1;
-          const aName = a.name ?? a.email;
-          const bName = b.name ?? b.email;
-          return aName.localeCompare(bName);
-        });
-        setMembers(sorted);
-      })
-      .catch(() => setMembers([]))
-      .finally(() => setLoading(false));
-  }, [teamId]);
+    refetchAll().finally(() => setLoading(false));
+  }, [refetchAll]);
+
+  // Close menu on outside click
+  React.useEffect(() => {
+    if (!menuOpenId) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpenId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [menuOpenId]);
+
+  // Close menu on Escape
+  React.useEffect(() => {
+    if (!menuOpenId) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpenId(null);
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [menuOpenId]);
+
+  const handleRemoveMember = async (memberId: string) => {
+    try {
+      const res = await fetch("/api/teams/members", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, userId: memberId }),
+      });
+      if (!res.ok) return;
+      setRemovingId(memberId);
+      setConfirmingId(null);
+      await new Promise((r) => setTimeout(r, 300));
+      setRemovingId(null);
+      await refetchAll();
+    } catch {
+      // Silently fail
+    }
+  };
+
+  const handleResend = async (inv: InvitationData) => {
+    try {
+      const res = await fetch("/api/teams/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, action: "resend", invitationId: inv.id, type: "email" }),
+      });
+      if (!res.ok) return;
+      setResentId(inv.id);
+      setMenuOpenId(null);
+      setTimeout(() => setResentId(null), 2000);
+    } catch {
+      // Silently fail
+    }
+  };
+
+  const handleRevoke = async (inv: InvitationData) => {
+    try {
+      const res = await fetch("/api/teams/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, action: "revoke", invitationId: inv.id, type: inv.type }),
+      });
+      if (!res.ok) return;
+      setMenuOpenId(null);
+      setRemovingId(`inv-${inv.id}`);
+      await new Promise((r) => setTimeout(r, 300));
+      setRemovingId(null);
+      await refetchAll();
+    } catch {
+      // Silently fail
+    }
+  };
+
+  const handleCopyLink = async (inv: InvitationData) => {
+    if (!inv.url) return;
+    try {
+      await navigator.clipboard.writeText(inv.url);
+      setCopiedId(inv.id);
+      setMenuOpenId(null);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // Silently fail
+    }
+  };
+
+  const handleLeave = async () => {
+    setLeavingTeam(true);
+    setLeaveError(null);
+    try {
+      const res = await fetch("/api/teams/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setLeaveError(data.error ?? "Failed to leave team");
+        setLeavingTeam(false);
+        return;
+      }
+      window.location.href = "/app";
+    } catch {
+      setLeaveError("Failed to leave team");
+      setLeavingTeam(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -379,7 +548,7 @@ function MembersTab({ teamId }: { teamId: string }) {
     );
   }
 
-  if (members.length === 0) {
+  if (members.length === 0 && invitations.length === 0) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -391,45 +560,230 @@ function MembersTab({ teamId }: { teamId: string }) {
   }
 
   return (
-    <div className="space-y-1">
-      {members.map((member) => (
-        <div
-          key={member.id}
-          className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#f5f5f4] transition-colors"
-        >
-          {member.avatar_url ? (
-            <img
-              src={member.avatar_url}
-              alt=""
-              className="w-8 h-8 rounded-full"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-[#e5e5e4] flex items-center justify-center text-[12px] font-medium text-[#666]">
-              {(member.name ?? member.email)[0]?.toUpperCase() ?? "?"}
+    <div>
+      {/* Summary line */}
+      <div className="text-[12px] text-[#888] mb-2">
+        {members.length} member{members.length !== 1 ? "s" : ""}
+        {invitations.length > 0 && `, ${invitations.length} pending`}
+      </div>
+
+      {/* Member rows */}
+      <div className="space-y-0.5">
+        {members.map((member) => {
+          const isConfirming = confirmingId === member.id;
+          const isRemoving = removingId === member.id;
+          const showMenu = isOwner && member.id !== userId && member.role !== "owner";
+
+          return (
+            <div
+              key={member.id}
+              className={`flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-300 ${
+                isRemoving ? "opacity-0 -translate-x-4 h-0 overflow-hidden py-0" : "hover:bg-[#f5f5f4]"
+              }`}
+            >
+              {isConfirming ? (
+                /* Inline confirmation */
+                <div className="flex-1 flex items-center justify-between gap-2">
+                  <span className="text-[12px] text-[#555] truncate">
+                    Remove {member.name ?? member.email} from {teamName}?
+                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => handleRemoveMember(member.id)}
+                      className="px-2.5 py-1 rounded-md text-[12px] font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                    <button
+                      onClick={() => setConfirmingId(null)}
+                      className="px-2.5 py-1 rounded-md text-[12px] font-medium text-[#888] hover:bg-[#f0f0ee] transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Avatar */}
+                  {member.avatar_url ? (
+                    <img
+                      src={member.avatar_url}
+                      alt=""
+                      className="w-8 h-8 rounded-full shrink-0"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-[#e5e5e4] flex items-center justify-center text-[12px] font-medium text-[#666] shrink-0">
+                      {(member.name ?? member.email)[0]?.toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                  {/* Name/email */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-medium text-[#1A1A1A] truncate">
+                      {member.name ?? member.email}
+                      {member.id === userId && (
+                        <span className="text-[11px] text-[#888] font-normal ml-1">(you)</span>
+                      )}
+                    </div>
+                    {member.name && (
+                      <div className="text-[11px] text-[#888] truncate">{member.email}</div>
+                    )}
+                  </div>
+                  {/* Role badge */}
+                  <span
+                    className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                      member.role === "owner"
+                        ? "bg-[#f0f0ee] text-[#555]"
+                        : "text-[#999]"
+                    }`}
+                  >
+                    {member.role === "owner" ? "Owner" : "Member"}
+                  </span>
+                  {/* Three-dot menu */}
+                  {showMenu && (
+                    <div className="relative" ref={menuOpenId === member.id ? menuRef : undefined}>
+                      <button
+                        onClick={() => setMenuOpenId(menuOpenId === member.id ? null : member.id)}
+                        className="p-1 rounded-md hover:bg-[#e5e5e4] transition-colors cursor-pointer"
+                      >
+                        <MoreVertical className="w-3.5 h-3.5 text-[#888]" />
+                      </button>
+                      {menuOpenId === member.id && (
+                        <div className="absolute right-0 top-7 z-10 bg-white rounded-lg shadow-lg border border-[rgba(0,0,0,0.08)] py-1 min-w-[120px]">
+                          <button
+                            onClick={() => {
+                              setMenuOpenId(null);
+                              setConfirmingId(member.id);
+                            }}
+                            className="w-full px-3 py-1.5 text-left text-[13px] text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-medium text-[#1A1A1A] truncate">
-              {member.name ?? member.email}
-            </div>
-            {member.name && (
-              <div className="text-[11px] text-[#888] truncate">
-                {member.email}
+          );
+        })}
+
+        {/* Pending invitation rows */}
+        {invitations.map((inv) => {
+          const invRemovingId = `inv-${inv.id}`;
+          const isRemoving = removingId === invRemovingId;
+          const label = inv.type === "email" ? inv.email ?? "Unknown" : `Invite link (${inv.useCount ?? 0} uses)`;
+
+          return (
+            <div
+              key={`inv-${inv.id}`}
+              className={`flex items-center gap-3 px-2 py-2 rounded-lg transition-all duration-300 ${
+                isRemoving ? "opacity-0 -translate-x-4 h-0 overflow-hidden py-0" : "hover:bg-[#f5f5f4]"
+              }`}
+            >
+              {/* Silhouette avatar */}
+              <div className="w-8 h-8 rounded-full bg-[#e5e5e4] flex items-center justify-center shrink-0">
+                <User className="w-4 h-4 text-[#999]" />
               </div>
-            )}
+              {/* Label + invited by */}
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium text-[#1A1A1A] truncate">{label}</div>
+                <div className="text-[11px] text-[#888] truncate">
+                  Invited by {inv.invitedBy}, {relativeTime(inv.createdAt)}
+                </div>
+              </div>
+              {/* Pending badge / Resent indicator */}
+              {resentId === inv.id ? (
+                <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full text-green-600 bg-green-50">
+                  Resent
+                </span>
+              ) : copiedId === inv.id ? (
+                <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full text-blue-600 bg-blue-50">
+                  Copied!
+                </span>
+              ) : (
+                <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                  Pending
+                </span>
+              )}
+              {/* Three-dot menu for invitations (owner only) */}
+              {isOwner && (
+                <div className="relative" ref={menuOpenId === `inv-${inv.id}` ? menuRef : undefined}>
+                  <button
+                    onClick={() => setMenuOpenId(menuOpenId === `inv-${inv.id}` ? null : `inv-${inv.id}`)}
+                    className="p-1 rounded-md hover:bg-[#e5e5e4] transition-colors cursor-pointer"
+                  >
+                    <MoreVertical className="w-3.5 h-3.5 text-[#888]" />
+                  </button>
+                  {menuOpenId === `inv-${inv.id}` && (
+                    <div className="absolute right-0 top-7 z-10 bg-white rounded-lg shadow-lg border border-[rgba(0,0,0,0.08)] py-1 min-w-[120px]">
+                      {inv.type === "email" ? (
+                        <button
+                          onClick={() => handleResend(inv)}
+                          className="w-full px-3 py-1.5 text-left text-[13px] text-[#1A1A1A] hover:bg-[#f5f5f4] transition-colors cursor-pointer"
+                        >
+                          Resend
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleCopyLink(inv)}
+                          className="w-full px-3 py-1.5 text-left text-[13px] text-[#1A1A1A] hover:bg-[#f5f5f4] transition-colors cursor-pointer"
+                        >
+                          Copy link
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleRevoke(inv)}
+                        className="w-full px-3 py-1.5 text-left text-[13px] text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                      >
+                        Revoke
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Leave team section */}
+      <div className="border-t mt-3 pt-3" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
+        {confirmingLeave ? (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] text-[#555]">
+              Leave {teamName}? You&apos;ll lose access to this workspace.
+            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={handleLeave}
+                disabled={leavingTeam}
+                className="px-2.5 py-1 rounded-md text-[12px] font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {leavingTeam ? "Leaving..." : "Leave"}
+              </button>
+              <button
+                onClick={() => { setConfirmingLeave(false); setLeaveError(null); }}
+                className="px-2.5 py-1 rounded-md text-[12px] font-medium text-[#888] hover:bg-[#f0f0ee] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-          <span
-            className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${
-              member.role === "owner"
-                ? "bg-[#f0f0ee] text-[#555]"
-                : "text-[#999]"
-            }`}
+        ) : (
+          <button
+            onClick={() => setConfirmingLeave(true)}
+            className="flex items-center gap-1.5 text-[13px] font-medium text-red-500 hover:text-red-600 transition-colors cursor-pointer"
           >
-            {member.role === "owner" ? "Owner" : "Member"}
-          </span>
-        </div>
-      ))}
+            <LogOut className="w-3.5 h-3.5" />
+            Leave team
+          </button>
+        )}
+        {leaveError && (
+          <p className="text-[12px] text-red-500 mt-1.5">{leaveError}</p>
+        )}
+      </div>
     </div>
   );
 }

@@ -257,6 +257,7 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
         teamSlug={activeTeam?.slug ?? ""}
         isPersonal={activeTeam?.isPersonal ?? true}
         isOwner={activeTeam?.role === "owner"}
+        userId={userId}
       />
     </TamboProvider>
   );
