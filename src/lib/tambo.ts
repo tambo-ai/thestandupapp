@@ -236,7 +236,7 @@ const findGitHubUser = defineTool({
 const searchIssues = defineTool({
   name: "searchIssues",
   description:
-    "Search Linear issues by keyword or natural language query. Use scope='team' to search across all team members' Linear accounts (results include memberName attribution). The team_roster context helper tells you which members have Linear connected — only pass those as memberIds. Personal scope (default): searches the current user's Linear account only.",
+    "Search Linear issues by keyword or natural language query. Use scope='team' to search across all team members' Linear accounts (results include memberName attribution). The team_roster context helper tells you which members have Linear connected — only pass those as memberIds. Personal scope (default): searches the current user's Linear account only. If the response contains both issues and errors, present the successful results and note which members had errors. Do NOT treat partial errors as a complete failure.",
   tool: async ({ query, limit, scope, memberIds }) => {
     type Issue = {
       identifier: string;
@@ -299,14 +299,14 @@ const searchIssues = defineTool({
       memberId: z.string(),
       memberName: z.string(),
       error: z.string(),
-    })).optional(),
+    })).optional().describe("Per-member errors (e.g. account not connected). Presence of errors does NOT mean the tool call failed — always present issues results for successful members and note which members had errors."),
   }),
 });
 
 const getPullRequests = defineTool({
   name: "getPullRequests",
   description:
-    "Fetch GitHub pull requests for the current user or across team members. Use scope='team' to get PRs from all connected team members (results include memberName attribution). The team_roster context helper tells you which members have GitHub connected — only pass those as memberIds. Personal scope (default): fetches the current user's PRs. Supports filtering by author, repo, org, date range.",
+    "Fetch GitHub pull requests for the current user or across team members. Use scope='team' to get PRs from all connected team members (results include memberName attribution). The team_roster context helper tells you which members have GitHub connected — only pass those as memberIds. Personal scope (default): fetches the current user's PRs. Supports filtering by author, repo, org, date range. If the response contains both pullRequests and errors, present the successful results to the user and mention which members had errors (e.g. 'GitHub not connected for [name]'). Do NOT treat partial errors as a complete failure.",
   tool: async ({ scope, memberIds, author, repo, org, since, until }) => {
     type PR = {
       number: number;
@@ -382,7 +382,7 @@ const getPullRequests = defineTool({
       memberId: z.string(),
       memberName: z.string(),
       error: z.string(),
-    })).optional(),
+    })).optional().describe("Per-member errors (e.g. account not connected). Presence of errors does NOT mean the tool call failed — always present pullRequests results for successful members and note which members had errors."),
   }),
 });
 
