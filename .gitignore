@@ -46,5 +46,8 @@ next-env.d.ts
 # cursor
 .cursor/
 
+# planning
+.planning/
+
 # agents
 .agents/.planning/
