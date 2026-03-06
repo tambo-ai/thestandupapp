@@ -23,13 +23,18 @@ export function withLinearClientForUser(
     const targetUserId = forUserId && forUserId !== user.id ? forUserId : user.id;
 
     let targetOrgId = organizationId ?? undefined;
+    const activeTeamId = request.cookies.get("active_team_id")?.value;
 
-    // If looking up another user, verify shared team membership and get the team's org ID
+    // If looking up another user, verify both are members of the *active* team
     if (targetUserId !== user.id) {
+      if (!activeTeamId) {
+        return NextResponse.json({ error: "No active team" }, { status: 400 });
+      }
       const sharedTeam = await getFullDb()
         .selectFrom("memberships as m1")
         .innerJoin("memberships as m2", "m1.team_id", "m2.team_id")
         .innerJoin("teams", "teams.id", "m1.team_id")
+        .where("m1.team_id", "=", activeTeamId)
         .where("m1.user_id", "=", user.id)
         .where("m2.user_id", "=", targetUserId)
         .select(["m1.team_id", "teams.workos_organization_id"])
