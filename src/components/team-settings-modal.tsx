@@ -1,5 +1,8 @@
 "use client";
 
+import { useAccessToken } from "@workos-inc/authkit-nextjs/components";
+import { Pipes, WorkOsWidgets } from "@workos-inc/widgets";
+import { connectionBadge, StatusDot } from "@/components/connection-status-dot";
 import { AlertTriangle, Check, Copy, Link, LogOut, Mail, MoreVertical, RefreshCw, User, Users, X } from "lucide-react";
 import * as React from "react";
 import { createPortal } from "react-dom";
@@ -13,9 +16,11 @@ interface TeamSettingsModalProps {
   isPersonal: boolean;
   isOwner: boolean;
   userId: string;
+  initialTab?: Tab;
+  connectionStatus?: { github: string; linear: string };
 }
 
-type Tab = "general" | "invite" | "members";
+type Tab = "general" | "invite" | "members" | "connections";
 
 interface InviteLinkData {
   token: string;
@@ -61,6 +66,24 @@ function relativeTime(dateString: string): string {
   return `${months[d.getMonth()]} ${d.getDate()}`;
 }
 
+function TabContent({ activeTab, children }: { activeTab: string; children: React.ReactNode }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const maxH = React.useRef(0);
+
+  React.useEffect(() => {
+    if (!ref.current) return;
+    const h = ref.current.scrollHeight;
+    if (h > maxH.current) maxH.current = h;
+    ref.current.style.minHeight = `${maxH.current}px`;
+  }, [activeTab]);
+
+  return (
+    <div ref={ref} className="px-5 py-4">
+      {children}
+    </div>
+  );
+}
+
 export function TeamSettingsModal({
   isOpen,
   onClose,
@@ -70,13 +93,16 @@ export function TeamSettingsModal({
   isPersonal,
   isOwner,
   userId,
+  initialTab,
+  connectionStatus,
 }: TeamSettingsModalProps) {
+  const connBadge = connectionStatus ? connectionBadge(connectionStatus) : null;
   const [activeTab, setActiveTab] = React.useState<Tab>("general");
 
-  // Reset to general tab when modal opens
+  // Reset to requested tab when modal opens
   React.useEffect(() => {
-    if (isOpen) setActiveTab("general");
-  }, [isOpen]);
+    if (isOpen) setActiveTab(initialTab ?? "general");
+  }, [isOpen, initialTab]);
 
   // Escape key close
   React.useEffect(() => {
@@ -91,11 +117,15 @@ export function TeamSettingsModal({
   if (!isOpen) return null;
 
   const tabs: { key: Tab; label: string }[] = isPersonal
-    ? [{ key: "general", label: "General" }]
+    ? [
+        { key: "general", label: "General" },
+        { key: "connections", label: "Your Connections" },
+      ]
     : [
         { key: "general", label: "General" },
         { key: "invite", label: "Invite" },
         { key: "members", label: "Members" },
+        { key: "connections", label: "Your Connections" },
       ];
 
   const modal = (
@@ -110,7 +140,7 @@ export function TeamSettingsModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-0">
           <h2 className="text-[15px] font-semibold text-[#1A1A1A]">
-            Team Settings
+            Settings
           </h2>
           <button
             onClick={onClose}
@@ -135,7 +165,12 @@ export function TeamSettingsModal({
                   : "text-[#888] hover:text-[#555]"
               }`}
             >
-              {tab.label}
+              <span className="flex items-center gap-1.5">
+                {tab.label}
+                {tab.key === "connections" && connBadge && (
+                  <StatusDot color={connBadge.color} />
+                )}
+              </span>
               {activeTab === tab.key && (
                 <div className="absolute bottom-0 left-3 right-3 h-0.5 bg-[#1A1A1A] rounded-full" />
               )}
@@ -143,8 +178,8 @@ export function TeamSettingsModal({
           ))}
         </div>
 
-        {/* Tab Content */}
-        <div className="px-5 py-4 min-h-[200px]">
+        {/* Tab Content — tracks max height so modal doesn't shrink between tabs */}
+        <TabContent activeTab={activeTab}>
           {activeTab === "general" && (
             <GeneralTab
               teamId={teamId}
@@ -159,7 +194,8 @@ export function TeamSettingsModal({
             <InviteTab teamId={teamId} isOwner={isOwner} />
           )}
           {activeTab === "members" && <MembersTab teamId={teamId} userId={userId} isOwner={isOwner} teamName={teamName} />}
-        </div>
+          {activeTab === "connections" && <ConnectionsTab />}
+        </TabContent>
       </div>
     </div>
   );
@@ -1041,7 +1077,7 @@ function MembersTab({
                   Invited by {inv.invitedBy}, {relativeTime(inv.createdAt)}
                 </div>
               </div>
-              {/* Pending badge / Resent indicator */}
+              {/* Status badge */}
               {resentId === inv.id ? (
                 <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full text-green-600 bg-green-50">
                   Resent
@@ -1050,9 +1086,13 @@ function MembersTab({
                 <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full text-blue-600 bg-blue-50">
                   Copied!
                 </span>
-              ) : (
+              ) : inv.type === "email" ? (
                 <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
                   Pending
+                </span>
+              ) : (
+                <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#f0f0ee] text-[#555]">
+                  Active
                 </span>
               )}
               {/* Three-dot menu for invitations (owner only) */}
@@ -1132,6 +1172,23 @@ function MembersTab({
           <p className="text-[12px] text-red-500 mt-1.5">{leaveError}</p>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Connections Tab ──────────────────────────────────────────── */
+
+function ConnectionsTab() {
+  const { getAccessToken } = useAccessToken();
+
+  return (
+    <div className="connections-modal-card">
+      <p className="text-[12px] text-[#888] mb-3">
+        Connect your GitHub and Linear accounts to enable standup tracking.
+      </p>
+      <WorkOsWidgets>
+        <Pipes authToken={getAccessToken as () => Promise<string>} />
+      </WorkOsWidgets>
     </div>
   );
 }

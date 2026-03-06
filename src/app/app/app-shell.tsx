@@ -2,7 +2,6 @@
 
 import { CanvasSpace } from "@/components/tambo/canvas-space";
 import { ConnectionPrompt } from "@/components/connection-prompt";
-import { ConnectionsModal } from "@/components/connections-modal";
 import { MessageThreadFull } from "@/components/tambo/message-thread-full";
 import { TeamSettingsModal } from "@/components/team-settings-modal";
 import { TeamSwitcher } from "@/components/team-switcher";
@@ -99,6 +98,7 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
   );
 
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [settingsTab, setSettingsTab] = React.useState<"general" | "invite" | "members" | "connections" | undefined>(undefined);
 
   // Toast notification for removed members
   const [toast, setToast] = React.useState<string | null>(null);
@@ -140,7 +140,6 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
     [activeTeam, userId, userName, userEmail, teamMembers],
   );
 
-  const [modalOpen, setModalOpen] = React.useState(false);
   const [connStatus, setConnStatus] = React.useState(
     connectionStatus ?? { github: "not_installed", linear: "not_installed" },
   );
@@ -203,9 +202,10 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
     };
   }, []);
 
-  const handleModalClose = React.useCallback(() => {
-    setModalOpen(false);
-    // Fire and forget — modal closes immediately, polling happens in background
+  const handleSettingsClose = React.useCallback(() => {
+    setSettingsOpen(false);
+    setSettingsTab(undefined);
+    // Poll connection status in case user changed connections
     pollConnectionStatus();
   }, [pollConnectionStatus]);
 
@@ -256,58 +256,60 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
       contextHelpers={contextHelpers}
       initialMessages={[systemPrompt]}
     >
-      <div className="flex h-screen w-screen overflow-hidden">
-        <div
-          className="shrink-0 relative flex flex-col"
-          style={{
-            width: chatWidth,
-            transition: dragging ? "none" : "width 0.15s ease",
-          }}
-        >
-          <UserHeader
-            userName={userName}
-            userImage={userImage}
-            connectionStatus={connStatus}
-            onOpenModal={() => setModalOpen(true)}
-            teamSwitcherSlot={
-              <TeamSwitcher
-                teams={teams}
-                activeTeamId={activeTeamId ?? null}
-                onOpenSettings={() => setSettingsOpen(true)}
-              />
-            }
-          />
-          {hasNoConnections && (
-            <ConnectionPrompt onOpenModal={() => setModalOpen(true)} />
-          )}
-          <div className="flex-1 min-h-0">
-            <MessageThreadFull />
-          </div>
-          <div
-            onMouseDown={onDragStart}
-            className="absolute top-0 -right-1.5 w-3 h-full cursor-col-resize z-10 group flex items-center justify-center"
-          >
-            <div
-              className="w-px h-full transition-all duration-150 group-hover:w-0.5 group-hover:rounded-full"
-              style={{
-                background: dragging ? "rgba(0,0,0,0.22)" : "rgba(0,0,0,0.06)",
-              }}
+      <div className="flex flex-col h-screen w-screen overflow-hidden">
+        <UserHeader
+          userName={userName}
+          userImage={userImage}
+          connectionStatus={connStatus}
+          onOpenSettings={(tab) => { if (tab) setSettingsTab(tab); setSettingsOpen(true); }}
+          teamSwitcherSlot={
+            <TeamSwitcher
+              teams={teams}
+              activeTeamId={activeTeamId ?? null}
             />
+          }
+        />
+        <div className="flex flex-1 min-h-0">
+          <div
+            className="shrink-0 relative flex flex-col"
+            style={{
+              width: chatWidth,
+              transition: dragging ? "none" : "width 0.15s ease",
+            }}
+          >
+            {hasNoConnections && (
+              <ConnectionPrompt onOpenModal={() => { setSettingsTab("connections"); setSettingsOpen(true); }} />
+            )}
+            <div className="flex-1 min-h-0">
+              <MessageThreadFull />
+            </div>
+            <div
+              onMouseDown={onDragStart}
+              className="absolute top-0 -right-1.5 w-3 h-full cursor-col-resize z-10 group flex items-center justify-center"
+            >
+              <div
+                className="w-px h-full transition-all duration-150 group-hover:w-0.5 group-hover:rounded-full"
+                style={{
+                  background: dragging ? "rgba(0,0,0,0.22)" : "rgba(0,0,0,0.06)",
+                }}
+              />
+            </div>
           </div>
-        </div>
 
-        <CanvasSpace />
+          <CanvasSpace />
+        </div>
       </div>
-      <ConnectionsModal isOpen={modalOpen} onClose={handleModalClose} />
       <TeamSettingsModal
         isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        onClose={handleSettingsClose}
         teamId={activeTeam?.id ?? ""}
         teamName={activeTeam?.name ?? ""}
         teamSlug={activeTeam?.slug ?? ""}
         isPersonal={activeTeam?.isPersonal ?? true}
         isOwner={activeTeam?.role === "owner"}
         userId={userId}
+        initialTab={settingsTab}
+        connectionStatus={connStatus}
       />
       {toast && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] bg-[#1A1A1A] text-white text-[13px] px-4 py-2.5 rounded-lg shadow-lg">
