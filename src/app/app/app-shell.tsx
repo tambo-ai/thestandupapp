@@ -34,6 +34,7 @@ interface Props {
     email: string;
     avatarUrl: string | null;
     role: "owner" | "member";
+    githubUsername: string | null;
     connections: { github: string; linear: string };
   }>;
 }
@@ -57,16 +58,16 @@ WRITE OPERATION RESTRICTION: NEVER perform write operations using another member
 
 ATTRIBUTION: When showing cross-team data, always attribute results to the team member they belong to. Note members with missing connections (e.g., "Note: 2 of 5 members don't have GitHub connected").
 
-${selectedTeam ? `SELECTED TEAM: "${selectedTeam.name}" (ID: ${selectedTeam.id}). Use this team by default for any team-related requests. Don't ask which team unless they explicitly want a different one.` : "If the user asks about a team, use listTeams to show options."}
+${selectedTeam ? `SELECTED TEAM: "${selectedTeam.name}" (internal ID: ${selectedTeam.id}). Use this team by default for any team-related requests. Don't ask which team unless they explicitly want a different one. IMPORTANT: This internal ID is NOT a Linear team ID. You MUST call listTeams (personal scope, no memberIds) first to discover the Linear team ID before calling getTeamMembers or searchIssues.` : "If the user asks about a team, use listTeams to show options."}
 
-TOOLS: listTeams, getTeamMembers, findGitHubUser, searchIssues, getPullRequests. All tools support scope='team' with memberIds for cross-team queries. Use team_roster context helper (provides member list with connection status on every message) to get member IDs. Only pass members with the relevant connection (github/linear) when using team scope.
+TOOLS: listTeams, getTeamMembers, searchIssues, getPullRequests. For team scope, pass memberIds as [{id: "...", name: "..."}, ...] from team_roster — only include members with the relevant connection (github/linear). Use personal scope (no memberIds) for listTeams discovery and single-user queries. The team_roster context helper provides member list with connection status and githubUsername on every message.
 
 CANVAS COMPONENTS:
 The canvas arranges components in a grid (no page scrolling). Up to 4 visible at once — new ones push out the oldest. Users can dismiss individual components. Render multiple components for richer views.
 
 Specialized (self-fetching, pass IDs):
 1. TeamOverview — "show me the team" → { teamId, teamName }
-2. PersonDetail — "what's [person] working on?" → find linearUserId + email via getTeamMembers, findGitHubUser for GitHub username, then pass { linearUserId, name, githubUsername?, avatar?, summary }
+2. PersonDetail — "what's [person] working on?" → find linearUserId via getTeamMembers, get githubUsername from team_roster, then pass { linearUserId, name, githubUsername?, avatar?, summary }
 3. WeeklyGoals — progress tracker, YOU provide data: { title, items: [{ identifier, title, status, assignee?, isAtRisk? }] }
 4. RiskReport — "what's at risk?" → { teamId, teamName? }
 5. Graph — data visualization (bar, line, pie charts)
@@ -131,6 +132,7 @@ export function AppShell({ userId, userName, userEmail, userImage, userToken, ac
           email: m.email,
           avatarUrl: m.avatarUrl,
           role: m.role,
+          githubUsername: m.githubUsername,
           connections: m.connections,
         })),
       }),

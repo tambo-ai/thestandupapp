@@ -1,4 +1,5 @@
 import { getWorkOS } from "@workos-inc/authkit-nextjs";
+import { GITHUB_API, ghHeaders } from "./github-client";
 import { getFullDb } from "./db";
 
 export interface TeamMember {
@@ -7,6 +8,7 @@ export interface TeamMember {
   email: string;
   avatarUrl: string | null;
   role: "owner" | "member";
+  githubUsername: string | null;
   connections: {
     github: "connected" | "not_connected";
     linear: "connected" | "not_connected";
@@ -44,6 +46,7 @@ export async function getTeamMembersWithConnections(
     members.map(async (member) => {
       let github: "connected" | "not_connected" = "not_connected";
       let linear: "connected" | "not_connected" = "not_connected";
+      let githubUsername: string | null = null;
 
       try {
         const ghResult = await workos.pipes.getAccessToken({
@@ -51,7 +54,17 @@ export async function getTeamMembersWithConnections(
           userId: member.id,
           ...orgParam,
         });
-        if (ghResult.active) github = "connected";
+        if (ghResult.active) {
+          github = "connected";
+          // Fetch GitHub username from the token
+          const res = await fetch(`${GITHUB_API}/user`, {
+            headers: ghHeaders(ghResult.accessToken.accessToken),
+          });
+          if (res.ok) {
+            const user = await res.json();
+            githubUsername = user.login ?? null;
+          }
+        }
       } catch {
         // Token lookup failed — treat as not connected
       }
@@ -73,6 +86,7 @@ export async function getTeamMembersWithConnections(
         email: member.email,
         avatarUrl: member.avatar_url,
         role: member.role as "owner" | "member",
+        githubUsername,
         connections: { github, linear },
       } satisfies TeamMember;
     }),

@@ -200,39 +200,6 @@ const getTeamMembers = defineTool({
   }),
 });
 
-const findGitHubUser = defineTool({
-  name: "findGitHubUser",
-  description:
-    "Find a person's GitHub username by email or name. The API tries: (1) email search, (2) org member name matching if a GitHub org is configured, (3) global name search. Pass forUserId to use a specific team member's GitHub token for the search (useful for finding users within that member's org). The team_roster context helper tells you member IDs.",
-  tool: async ({ email, name, forUserId }) => {
-    const params = new URLSearchParams();
-    if (email) params.set("email", email);
-    if (name) params.set("name", name);
-    if (forUserId) params.set("forUserId", forUserId);
-    return apiFetch<{
-      users: { login: string; avatar: string; name?: string }[];
-      bestMatch: string | null;
-      matchedBy: "email" | "org" | "name" | null;
-    }>(`/api/github/find-user?${params}`);
-  },
-  inputSchema: z.object({
-    email: z.string().optional().describe("Person's email from Linear (preferred for exact match)"),
-    name: z.string().optional().describe("Person's name (used for org member matching or fallback search)"),
-    forUserId: z.string().optional().describe("Team member's user ID whose GitHub token to use for the search (from team_roster)"),
-  }),
-  outputSchema: z.object({
-    users: z.array(
-      z.object({
-        login: z.string(),
-        avatar: z.string(),
-        name: z.string().optional(),
-      }),
-    ),
-    bestMatch: z.string().nullable(),
-    matchedBy: z.enum(["email", "org", "name"]).nullable(),
-  }),
-});
-
 const searchIssues = defineTool({
   name: "searchIssues",
   description:
@@ -386,7 +353,7 @@ const getPullRequests = defineTool({
   }),
 });
 
-export const tools: TamboTool[] = [listTeams, getTeamMembers, findGitHubUser, searchIssues, getPullRequests];
+export const tools: TamboTool[] = [listTeams, getTeamMembers, searchIssues, getPullRequests];
 
 export const components: TamboComponent[] = [
   {
@@ -406,7 +373,7 @@ export const components: TamboComponent[] = [
   {
     name: "PersonDetail",
     description:
-      "Detailed view of one person's Linear issues and GitHub PRs. Pass their Linear user ID and name. If you know their GitHub username (from findGitHubUser), pass it as githubUsername. This component fetches using the current user's token. For viewing a team member's own data (from their account), use tools with that member's forUserId and render via SummaryPanel.",
+      "Detailed view of one person's Linear issues and GitHub PRs. Pass their Linear user ID and name. Get their GitHub username from the team_roster context helper and pass it as githubUsername. This component fetches using the current user's token. For viewing a team member's own data (from their account), use tools with that member's forUserId and render via SummaryPanel.",
     component: PersonDetail,
     propsSchema: personDetailSchema,
   },
