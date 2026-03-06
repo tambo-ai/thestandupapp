@@ -1,7 +1,7 @@
 "use client";
 
 import { switchTeam } from "@/lib/team-actions";
-import { ChevronDown, Plus, Settings } from "lucide-react";
+import { Check, ChevronDown, Plus } from "lucide-react";
 import * as React from "react";
 import { TeamCreationForm } from "./team-creation-form";
 
@@ -16,13 +16,26 @@ export interface TeamInfo {
 interface TeamSwitcherProps {
   teams: TeamInfo[];
   activeTeamId: string | null;
-  onOpenSettings: () => void;
+}
+
+function TeamAvatar({ name, isPersonal, size = 28 }: { name: string; isPersonal: boolean; size?: number }) {
+  const initial = isPersonal ? "P" : name[0]?.toUpperCase() ?? "?";
+  const bg = isPersonal ? "#e8e8e6" : "#1A1A1A";
+  const fg = isPersonal ? "#666" : "#fff";
+
+  return (
+    <div
+      className="rounded-md flex items-center justify-center font-semibold shrink-0"
+      style={{ width: size, height: size, background: bg, color: fg, fontSize: size * 0.43 }}
+    >
+      {initial}
+    </div>
+  );
 }
 
 export function TeamSwitcher({
   teams,
   activeTeamId,
-  onOpenSettings,
 }: TeamSwitcherProps) {
   const [open, setOpen] = React.useState(false);
   const [showCreateForm, setShowCreateForm] = React.useState(false);
@@ -67,8 +80,7 @@ export function TeamSwitcher({
     .filter((t) => !t.isPersonal)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const showNewTeamOption =
-    !activeTeamId || (activeTeam?.isPersonal ?? false);
+  const showNewTeamOption = true;
 
   async function handleSelect(team: TeamInfo) {
     if (team.id === activeTeamId) {
@@ -104,26 +116,33 @@ export function TeamSwitcher({
           setOpen((v) => !v);
           if (open) setShowCreateForm(false);
         }}
-        className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-[#f5f5f4] transition-colors cursor-pointer text-[13px] font-medium text-[#1A1A1A] max-w-[160px]"
+        className="flex items-center gap-2 px-1.5 py-1 rounded-lg hover:bg-[#f5f5f4] transition-colors cursor-pointer max-w-[180px]"
       >
-        <span className="truncate">{displayName}</span>
+        <TeamAvatar
+          name={displayName}
+          isPersonal={activeTeam?.isPersonal ?? true}
+          size={22}
+        />
+        <span className="text-[13px] font-medium text-[#1A1A1A] truncate">
+          {displayName}
+        </span>
         <ChevronDown
-          className="w-3 h-3 text-[#888] shrink-0 transition-transform"
+          className="w-3 h-3 text-[#999] shrink-0 transition-transform duration-150"
           style={{ transform: open ? "rotate(180deg)" : undefined }}
         />
       </button>
 
       {open && (
         <div
-          className="absolute top-full left-0 mt-1 w-[220px] bg-white rounded-lg border py-1 z-50"
+          className="absolute top-full left-0 mt-1.5 w-[260px] bg-white rounded-xl border py-1.5 z-50"
           style={{
             borderColor: "rgba(0,0,0,0.08)",
             boxShadow:
-              "0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)",
+              "0 8px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
           }}
         >
           {showCreateForm ? (
-            <div className="px-2 py-1">
+            <div className="px-3 py-2">
               <TeamCreationForm
                 onCreated={handleCreated}
                 onCancel={() => setShowCreateForm(false)}
@@ -131,87 +150,99 @@ export function TeamSwitcher({
             </div>
           ) : (
             <>
-              {/* Personal workspace */}
-              {personalTeams.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => handleSelect(t)}
-                  disabled={switching !== null}
-                  className={`w-full text-left px-3 py-1.5 text-[13px] transition-colors cursor-pointer ${
-                    t.id === activeTeamId
-                      ? "font-semibold text-[#1A1A1A] bg-[#f5f5f4]"
-                      : "text-[#555] hover:bg-[#f5f5f4]"
-                  } ${switching === t.id ? "opacity-50" : ""}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="truncate">My Workspace</span>
-                    {switching === t.id && (
-                      <span className="text-[11px] text-[#999]">...</span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-[#999] font-normal">
-                    Personal
-                  </div>
-                </button>
-              ))}
+              {/* Section label */}
+              <div className="px-3 pt-1 pb-1.5 text-[11px] font-medium text-[#999] uppercase tracking-wider">
+                Workspaces
+              </div>
 
-              {/* Divider */}
-              {personalTeams.length > 0 && realTeams.length > 0 && (
-                <div
-                  className="my-1 mx-3 border-t"
-                  style={{ borderColor: "rgba(0,0,0,0.06)" }}
-                />
-              )}
+              {/* Personal workspace */}
+              {personalTeams.map((t) => {
+                const isActive = t.id === activeTeamId;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => handleSelect(t)}
+                    disabled={switching !== null}
+                    className={`w-full text-left px-3 py-2 transition-colors cursor-pointer flex items-center gap-2.5 ${
+                      isActive
+                        ? "bg-[#f5f5f4]"
+                        : "hover:bg-[#fafaf9]"
+                    } ${switching === t.id ? "opacity-50" : ""}`}
+                  >
+                    <TeamAvatar name="Personal" isPersonal size={28} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-medium text-[#1A1A1A] truncate">
+                        My Workspace
+                      </div>
+                      <div className="text-[11px] text-[#999] font-normal">
+                        Personal
+                      </div>
+                    </div>
+                    {isActive && <Check className="w-3.5 h-3.5 text-[#1A1A1A] shrink-0" />}
+                    {switching === t.id && (
+                      <span className="text-[11px] text-[#999] shrink-0">Switching...</span>
+                    )}
+                  </button>
+                );
+              })}
 
               {/* Real teams */}
-              {realTeams.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => handleSelect(t)}
-                  disabled={switching !== null}
-                  className={`w-full text-left px-3 py-1.5 text-[13px] transition-colors cursor-pointer ${
-                    t.id === activeTeamId
-                      ? "font-semibold text-[#1A1A1A] bg-[#f5f5f4]"
-                      : "text-[#555] hover:bg-[#f5f5f4]"
-                  } ${switching === t.id ? "opacity-50" : ""}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="truncate">{t.name}</span>
-                    {switching === t.id && (
-                      <span className="text-[11px] text-[#999]">...</span>
-                    )}
-                  </div>
-                </button>
-              ))}
-
-              {/* Divider before actions */}
-              <div
-                className="my-1 mx-3 border-t"
-                style={{ borderColor: "rgba(0,0,0,0.06)" }}
-              />
+              {realTeams.length > 0 && (
+                <>
+                  <div
+                    className="my-1.5 mx-3 border-t"
+                    style={{ borderColor: "rgba(0,0,0,0.06)" }}
+                  />
+                  {realTeams.map((t) => {
+                    const isActive = t.id === activeTeamId;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => handleSelect(t)}
+                        disabled={switching !== null}
+                        className={`w-full text-left px-3 py-2 transition-colors cursor-pointer flex items-center gap-2.5 ${
+                          isActive
+                            ? "bg-[#f5f5f4]"
+                            : "hover:bg-[#fafaf9]"
+                        } ${switching === t.id ? "opacity-50" : ""}`}
+                      >
+                        <TeamAvatar name={t.name} isPersonal={false} size={28} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-medium text-[#1A1A1A] truncate">
+                            {t.name}
+                          </div>
+                        </div>
+                        {isActive && <Check className="w-3.5 h-3.5 text-[#1A1A1A] shrink-0" />}
+                        {switching === t.id && (
+                          <span className="text-[11px] text-[#999] shrink-0">Switching...</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </>
+              )}
 
               {/* + New Team */}
               {showNewTeamOption && (
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="w-full text-left px-3 py-1.5 text-[13px] text-[#555] hover:bg-[#f5f5f4] transition-colors cursor-pointer flex items-center gap-2"
-                >
-                  <Plus className="w-3.5 h-3.5 text-[#888]" />
-                  <span>New Team</span>
-                </button>
+                <>
+                  <div
+                    className="my-1.5 mx-3 border-t"
+                    style={{ borderColor: "rgba(0,0,0,0.06)" }}
+                  />
+                  <button
+                    onClick={() => setShowCreateForm(true)}
+                    className="w-full text-left px-3 py-2 text-[13px] text-[#555] hover:bg-[#fafaf9] transition-colors cursor-pointer flex items-center gap-2.5"
+                  >
+                    <div
+                      className="rounded-md flex items-center justify-center shrink-0 border border-dashed"
+                      style={{ width: 28, height: 28, borderColor: "rgba(0,0,0,0.15)" }}
+                    >
+                      <Plus className="w-3.5 h-3.5 text-[#999]" />
+                    </div>
+                    <span className="font-medium">New Team</span>
+                  </button>
+                </>
               )}
-
-              {/* Settings */}
-              <button
-                onClick={() => {
-                  setOpen(false);
-                  onOpenSettings();
-                }}
-                className="w-full text-left px-3 py-1.5 text-[13px] text-[#555] hover:bg-[#f5f5f4] transition-colors cursor-pointer flex items-center gap-2"
-              >
-                <Settings className="w-3.5 h-3.5 text-[#888]" />
-                <span>Team Settings</span>
-              </button>
             </>
           )}
         </div>

@@ -1,35 +1,25 @@
 "use client";
 
+import { connectionBadge, StatusDot } from "@/components/connection-status-dot";
 import { logout } from "@/lib/auth-actions";
 import { Settings, LogOut } from "lucide-react";
 import * as React from "react";
-
-function dotColor(status: string): string {
-  if (status === "connected") return "#22C55E";
-  if (status === "needs_reauthorization") return "#F59E0B";
-  return "#DDD";
-}
-
-function dotLabel(provider: string, status: string): string {
-  if (status === "connected") return `${provider}: Connected`;
-  if (status === "needs_reauthorization")
-    return `${provider}: Needs reconnection`;
-  return `${provider}: Not connected`;
-}
 
 export function UserHeader({
   userName,
   userImage,
   connectionStatus,
-  onOpenModal,
+  onOpenSettings,
   teamSwitcherSlot,
 }: {
   userName: string;
   userImage?: string;
   connectionStatus: { github: string; linear: string };
-  onOpenModal: () => void;
+  onOpenSettings: (tab?: "connections") => void;
   teamSwitcherSlot?: React.ReactNode;
 }) {
+  const badge = connectionBadge(connectionStatus);
+
   return (
     <div
       className="flex items-center gap-2 px-4 py-2 border-b"
@@ -61,36 +51,15 @@ export function UserHeader({
         {userName}
       </span>
 
-      {/* Status dots */}
-      <div className="flex items-center gap-1">
-        <button
-          onClick={onOpenModal}
-          className="p-1 rounded-md hover:bg-[#f5f5f4] transition-colors cursor-pointer"
-          title={dotLabel("GitHub", connectionStatus.github)}
-        >
-          <span
-            className="w-2 h-2 rounded-full inline-block"
-            style={{ background: dotColor(connectionStatus.github) }}
-          />
-        </button>
-        <button
-          onClick={onOpenModal}
-          className="p-1 rounded-md hover:bg-[#f5f5f4] transition-colors cursor-pointer"
-          title={dotLabel("Linear", connectionStatus.linear)}
-        >
-          <span
-            className="w-2 h-2 rounded-full inline-block"
-            style={{ background: dotColor(connectionStatus.linear) }}
-          />
-        </button>
-      </div>
-
       <button
-        onClick={onOpenModal}
-        className="p-1.5 rounded-md hover:bg-[#f5f5f4] transition-colors cursor-pointer"
-        title="Connections"
+        onClick={() => onOpenSettings(badge ? "connections" : undefined)}
+        className="relative p-1.5 rounded-md hover:bg-[#f5f5f4] transition-colors cursor-pointer"
+        title={badge?.title ?? "Settings"}
       >
         <Settings className="w-3.5 h-3.5 text-[#888]" />
+        {badge && (
+          <StatusDot color={badge.color} className="absolute top-0.5 right-0.5 ring-2 ring-white" />
+        )}
       </button>
 
       <form action={logout}>
