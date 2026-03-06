@@ -115,7 +115,7 @@ export function TeamCreationForm({ onCreated, onCancel }: TeamCreationFormProps)
 
       <div>
         <div className="flex items-center gap-1 text-[11px] text-[#999] mb-0.5">
-          <span>app.thestandup.com/</span>
+          <span>standup.site/</span>
         </div>
         <input
           type="text"
