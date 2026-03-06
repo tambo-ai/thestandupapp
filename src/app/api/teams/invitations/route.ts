@@ -211,6 +211,22 @@ export async function POST(request: Request) {
 
     const workos = getWorkOS();
 
+    // Verify the invitation belongs to this team's org before mutating
+    try {
+      const invitation = await workos.userManagement.getInvitation(invitationId);
+      if (invitation.organizationId !== team.workos_organization_id) {
+        return NextResponse.json(
+          { error: "Invitation not found" },
+          { status: 404 },
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { error: "Invitation not found" },
+        { status: 404 },
+      );
+    }
+
     if (action === "resend") {
       await workos.userManagement.resendInvitation(invitationId);
       return NextResponse.json({ success: true });
