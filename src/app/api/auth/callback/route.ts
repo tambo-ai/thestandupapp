@@ -1,4 +1,4 @@
-import { getWorkOS, handleAuth } from '@workos-inc/authkit-nextjs';
+import { getWorkOS, handleAuth, switchToOrganization } from '@workos-inc/authkit-nextjs';
 import { cookies } from 'next/headers';
 import { sql } from 'kysely';
 import { db, getFullDb } from '@/lib/db';
@@ -190,6 +190,17 @@ export const GET = handleAuth({
             secure: process.env.NODE_ENV === 'production',
             maxAge: 30 * 24 * 60 * 60,
           });
+
+          // Switch WorkOS session org to match the new team so token
+          // lookups (withAuth().organizationId) resolve correctly.
+          if (invite.workos_organization_id) {
+            try {
+              await switchToOrganization(invite.workos_organization_id);
+            } catch {
+              // switchToOrganization may throw a redirect — swallow it
+              // here since handleAuth will redirect to returnPathname.
+            }
+          }
         }
       } catch (error) {
         console.error('[auth callback] Pending invite join error:', error);
