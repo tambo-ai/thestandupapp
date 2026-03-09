@@ -1,40 +1,115 @@
 import { LinearClient } from "@linear/sdk";
+import { getWorkOS, withAuth } from "@workos-inc/authkit-nextjs";
 import { NextRequest, NextResponse } from "next/server";
+import { getFullDb } from "./db";
 
 export { LinearClient } from "@linear/sdk";
 
 /**
- * Create a LinearClient from a NextRequest's x-linear-api-key header.
- * Returns the client, or a 401 NextResponse if the key is missing.
+ * Wraps a route handler with cross-member Linear client lookup via WorkOS Pipes.
+ * Reads `forUserId` from query params; if present and different from the
+ * requesting user, validates both share a team before retrieving the target
+ * user's Linear token.  Write routes should use `withLinearClient` instead.
  */
-export function linearClientFromRequest(
-  request: NextRequest,
-): LinearClient | NextResponse {
-  const apiKey = request.headers.get("x-linear-api-key");
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "Linear API key not provided" },
-      { status: 401 },
-    );
-  }
-  return new LinearClient({ apiKey });
+export function withLinearClientForUser(
+  handler: (
+    client: LinearClient,
+    request: NextRequest,
+  ) => Promise<NextResponse>,
+) {
+  return async (request: NextRequest) => {
+    const { user, organizationId } = await withAuth({ ensureSignedIn: true });
+    const forUserId = request.nextUrl.searchParams.get("forUserId");
+    const targetUserId = forUserId && forUserId !== user.id ? forUserId : user.id;
+
+    let targetOrgId = organizationId ?? undefined;
+    const activeTeamId = request.cookies.get("active_team_id")?.value;
+
+    // If looking up another user, verify both are members of the *active* team
+    if (targetUserId !== user.id) {
+      if (!activeTeamId) {
+        return NextResponse.json({ error: "No active team" }, { status: 400 });
+      }
+      const sharedTeam = await getFullDb()
+        .selectFrom("memberships as m1")
+        .innerJoin("memberships as m2", "m1.team_id", "m2.team_id")
+        .innerJoin("teams", "teams.id", "m1.team_id")
+        .where("m1.team_id", "=", activeTeamId)
+        .where("m1.user_id", "=", user.id)
+        .where("m2.user_id", "=", targetUserId)
+        .select(["m1.team_id", "teams.workos_organization_id"])
+        .executeTakeFirst();
+
+      if (!sharedTeam) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      }
+      if (sharedTeam.workos_organization_id) {
+        targetOrgId = sharedTeam.workos_organization_id;
+      }
+    }
+
+    const result = await getWorkOS().pipes.getAccessToken({
+      provider: "linear",
+      userId: targetUserId,
+      ...(targetOrgId ? { organizationId: targetOrgId } : {}),
+    });
+
+    if (!result.active) {
+      return NextResponse.json(
+        { error: "Linear not connected", code: result.error, forUserId: targetUserId },
+        { status: 401 },
+      );
+    }
+
+    const client = new LinearClient({
+      accessToken: result.accessToken.accessToken,
+    });
+
+    try {
+      return await handler(client, request);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown error";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  };
 }
 
 /**
  * Wraps a route handler that uses a LinearClient.
- * Extracts the API key, catches errors, and returns proper JSON responses.
+ * Retrieves the Linear OAuth token server-side via WorkOS Pipes.
+ * The handler signature is unchanged — callers still receive a LinearClient.
  */
 export function withLinearClient(
-  handler: (client: LinearClient, request: NextRequest) => Promise<NextResponse>,
+  handler: (
+    client: LinearClient,
+    request: NextRequest,
+  ) => Promise<NextResponse>,
 ) {
   return async (request: NextRequest) => {
-    const clientOrError = linearClientFromRequest(request);
-    if (clientOrError instanceof NextResponse) return clientOrError;
+    const { user, organizationId } = await withAuth({ ensureSignedIn: true });
+    const result = await getWorkOS().pipes.getAccessToken({
+      provider: "linear",
+      userId: user.id,
+      ...(organizationId ? { organizationId } : {}),
+    });
+
+    if (!result.active) {
+      return NextResponse.json(
+        { error: "Linear not connected", code: result.error },
+        { status: 401 },
+      );
+    }
+
+    const client = new LinearClient({
+      accessToken: result.accessToken.accessToken,
+    });
 
     try {
-      return await handler(clientOrError, request);
+      return await handler(client, request);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
+      const message =
+        error instanceof Error ? error.message : "Unknown error";
       return NextResponse.json({ error: message }, { status: 500 });
     }
   };

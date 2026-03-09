@@ -1,4 +1,4 @@
-import { withLinearClient } from "@/lib/linear-client";
+import { withLinearClientForUser } from "@/lib/linear-client";
 import { NextResponse } from "next/server";
 
 /**
@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
  * @returns Array of the user's 20 most recently updated issues with identifier,
  *          title, url, priorityLabel, updatedAt, and workflow state.
  */
-export const GET = withLinearClient(async (linear, request) => {
+export const GET = withLinearClientForUser(async (linear, request) => {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
 

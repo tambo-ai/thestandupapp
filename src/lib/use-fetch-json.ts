@@ -1,4 +1,3 @@
-import { getTokenHeaders } from "@/lib/user-tokens";
 import { useEffect, useState } from "react";
 
 interface FetchResult<T> {
@@ -8,7 +7,7 @@ interface FetchResult<T> {
 
 /**
  * Fetches JSON from a URL with automatic cancellation on unmount/URL change.
- * Automatically attaches user-scoped, encrypted GitHub and Linear tokens as headers.
+ * Server handles authentication via session cookies.
  * Pass `null` to skip the fetch.
  */
 export function useFetchJSON<T>(url: string | null): FetchResult<T> {
@@ -21,11 +20,8 @@ export function useFetchJSON<T>(url: string | null): FetchResult<T> {
     setData(null);
     setError(null);
 
-    getTokenHeaders().then((headers) => {
-      if (cancelled) return;
-      return fetch(url, { headers });
-    })
-      .then((r) => r?.json())
+    fetch(url)
+      .then((r) => r.json())
       .then((result) => {
         if (cancelled || !result) return;
         if (result.error) {

@@ -1,4 +1,4 @@
-import { withLinearClient } from "@/lib/linear-client";
+import { withLinearClientForUser } from "@/lib/linear-client";
 import { NextResponse } from "next/server";
 
 /** A single at-risk issue with a human-readable reason. */
@@ -28,7 +28,7 @@ interface RiskSection {
  *
  * @returns `{ teamName, generatedAt, sections, totalRisks }`
  */
-export const GET = withLinearClient(async (linear, request) => {
+export const GET = withLinearClientForUser(async (linear, request) => {
   const { searchParams } = new URL(request.url);
   const teamId = searchParams.get("teamId");
 

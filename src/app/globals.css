@@ -1,3 +1,5 @@
+@import '@radix-ui/themes/styles.css';
+@import '@workos-inc/widgets/styles.css';
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
@@ -79,6 +81,32 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+}
+
+/* Fix: WorkOS widget root uses block-size:100% which stretches the modal card */
+.connections-modal-card,
+.connections-modal-card .woswidgets-root,
+.connections-modal-card .radix-themes,
+.connections-modal-card .rt-Theme {
+  height: auto !important;
+  block-size: auto !important;
+  min-height: 0 !important;
+}
+
+/* Hide extra skeleton loading items — widget hardcodes 6 but we only have 2 providers */
+.connections-modal-card .woswidgets-card-list-item:nth-child(n+3) {
+  display: none !important;
+}
+
+/* Fix: WorkOS widget portals (dropdowns, dialogs) must render above our z-50 modal */
+[data-radix-popper-content-wrapper],
+.rt-DialogOverlay,
+.rt-DialogContent,
+.rt-AlertDialogOverlay,
+.rt-AlertDialogContent,
+.rt-BaseDialogOverlay,
+.rt-BaseDialogContent {
+  z-index: 100 !important;
 }
 
 /* Scrollbar */

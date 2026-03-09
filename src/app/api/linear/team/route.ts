@@ -1,4 +1,4 @@
-import { withLinearClient } from "@/lib/linear-client";
+import { withLinearClientForUser } from "@/lib/linear-client";
 import { NextResponse } from "next/server";
 
 /**
@@ -13,7 +13,7 @@ import { NextResponse } from "next/server";
  * @query id   - Linear team ID (optional — omit to list all teams)
  * @query lite - Skip issue analysis, return only member names/avatars (faster)
  */
-export const GET = withLinearClient(async (linear, request) => {
+export const GET = withLinearClientForUser(async (linear, request) => {
   const { searchParams } = new URL(request.url);
   const teamId = searchParams.get("id");
   const lite = searchParams.get("lite") === "true";
