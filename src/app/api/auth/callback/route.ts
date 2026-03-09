@@ -155,24 +155,10 @@ export const GET = handleAuth({
             .executeTakeFirst();
 
           if (!existingMembership) {
-            await fullDb
-              .insertInto('memberships')
-              .values({
-                id: crypto.randomUUID(),
-                team_id: invite.team_id,
-                user_id: user.id,
-                role: 'member',
-              })
-              .execute();
-
-            // Update invite use count
-            await fullDb
-              .updateTable('invite_links')
-              .set({ use_count: sql`use_count + 1` })
-              .where('id', '=', invite.id)
-              .execute();
-
-            // Create WorkOS org membership if team has org
+            // Create WorkOS org membership first — if this fails, nothing
+            // is written locally so there's no stale state to clean up.
+            // If it succeeds but the local writes below fail, Step 5's
+            // WorkOS → local sync will reconcile on next login.
             if (invite.workos_organization_id) {
               const workos = getWorkOS();
               await workos.userManagement.createOrganizationMembership({
@@ -180,6 +166,26 @@ export const GET = handleAuth({
                 userId: user.id,
               });
             }
+
+            // Local membership + use_count in a transaction so they
+            // either both succeed or neither does.
+            await fullDb.transaction().execute(async (trx) => {
+              await trx
+                .insertInto('memberships')
+                .values({
+                  id: crypto.randomUUID(),
+                  team_id: invite.team_id,
+                  user_id: user.id,
+                  role: 'member',
+                })
+                .execute();
+
+              await trx
+                .updateTable('invite_links')
+                .set({ use_count: sql`use_count + 1` })
+                .where('id', '=', invite.id)
+                .execute();
+            });
           }
 
           // Set active team to the newly joined team
