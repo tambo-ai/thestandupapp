@@ -70,9 +70,16 @@ export async function POST(request: Request) {
     );
   }
 
-  // Create WorkOS Organization
+  // Create WorkOS Organization and membership first — if these fail,
+  // nothing is written to the DB so there's no stale state.
   const workos = getWorkOS();
   const org = await workos.organizations.createOrganization({ name });
+
+  await workos.userManagement.createOrganizationMembership({
+    organizationId: org.id,
+    userId: user.id,
+    roleSlug: "admin",
+  });
 
   const teamId = crypto.randomUUID();
   const inviteLinkId = crypto.randomUUID();
@@ -115,13 +122,6 @@ export async function POST(request: Request) {
         revoked_at: null,
       })
       .execute();
-  });
-
-  // Create WorkOS org membership
-  await workos.userManagement.createOrganizationMembership({
-    organizationId: org.id,
-    userId: user.id,
-    roleSlug: "admin",
   });
 
   // Set active_team_id cookie

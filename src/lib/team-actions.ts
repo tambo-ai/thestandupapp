@@ -148,6 +148,18 @@ export async function joinTeam(
     throw new Error('Team not found');
   }
 
+  // Create WorkOS org membership first — if this fails, nothing is
+  // written to the DB so there's no stale state. If it succeeds but
+  // the DB transaction below fails, the WorkOS → local sync on next
+  // login will reconcile.
+  if (team.workos_organization_id) {
+    const workos = getWorkOS();
+    await workos.userManagement.createOrganizationMembership({
+      organizationId: team.workos_organization_id,
+      userId: user.id,
+    });
+  }
+
   // Create membership and increment use count in a transaction
   await fullDb.transaction().execute(async (trx) => {
     await trx
@@ -166,15 +178,6 @@ export async function joinTeam(
       .where('invite_links.id', '=', invite.id)
       .execute();
   });
-
-  // Create WorkOS org membership if team has a WorkOS organization
-  if (team.workos_organization_id) {
-    const workos = getWorkOS();
-    await workos.userManagement.createOrganizationMembership({
-      organizationId: team.workos_organization_id,
-      userId: user.id,
-    });
-  }
 
   return { teamId: invite.team_id, teamName: team.name };
 }

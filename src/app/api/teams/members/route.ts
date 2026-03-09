@@ -128,33 +128,27 @@ export async function DELETE(request: Request) {
     .select("teams.workos_organization_id")
     .executeTakeFirst();
 
+  // Delete WorkOS org membership first — if this fails, nothing
+  // changes in the DB so the member stays consistently in both.
+  if (team?.workos_organization_id) {
+    const workos = getWorkOS();
+    const orgMemberships =
+      await workos.userManagement.listOrganizationMemberships({
+        organizationId: team.workos_organization_id,
+        userId: targetUserId,
+      });
+
+    for (const om of orgMemberships.data) {
+      await workos.userManagement.deleteOrganizationMembership(om.id);
+    }
+  }
+
   // Delete target's local membership
   await fullDb
     .deleteFrom("memberships")
     .where("memberships.user_id", "=", targetUserId)
     .where("memberships.team_id", "=", teamId)
     .execute();
-
-  // Delete WorkOS org membership if team has a WorkOS organization
-  if (team?.workos_organization_id) {
-    try {
-      const workos = getWorkOS();
-      const orgMemberships =
-        await workos.userManagement.listOrganizationMemberships({
-          organizationId: team.workos_organization_id,
-          userId: targetUserId,
-        });
-
-      for (const om of orgMemberships.data) {
-        await workos.userManagement.deleteOrganizationMembership(om.id);
-      }
-    } catch (err) {
-      console.error(
-        "Failed to delete WorkOS org membership on remove:",
-        err,
-      );
-    }
-  }
 
   return NextResponse.json({ removed: true });
 }

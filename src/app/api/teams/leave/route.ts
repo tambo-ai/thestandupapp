@@ -64,30 +64,27 @@ export async function POST(request: Request) {
     .select("teams.workos_organization_id")
     .executeTakeFirst();
 
+  // Delete WorkOS org membership first — if this fails, nothing
+  // changes in the DB so the user stays a member consistently.
+  if (team?.workos_organization_id) {
+    const workos = getWorkOS();
+    const orgMemberships =
+      await workos.userManagement.listOrganizationMemberships({
+        organizationId: team.workos_organization_id,
+        userId: user.id,
+      });
+
+    for (const om of orgMemberships.data) {
+      await workos.userManagement.deleteOrganizationMembership(om.id);
+    }
+  }
+
   // Delete local membership
   await fullDb
     .deleteFrom("memberships")
     .where("memberships.user_id", "=", user.id)
     .where("memberships.team_id", "=", teamId)
     .execute();
-
-  // Delete WorkOS org membership if team has a WorkOS organization
-  if (team?.workos_organization_id) {
-    try {
-      const workos = getWorkOS();
-      const orgMemberships =
-        await workos.userManagement.listOrganizationMemberships({
-          organizationId: team.workos_organization_id,
-          userId: user.id,
-        });
-
-      for (const om of orgMemberships.data) {
-        await workos.userManagement.deleteOrganizationMembership(om.id);
-      }
-    } catch (err) {
-      console.error("Failed to delete WorkOS org membership on leave:", err);
-    }
-  }
 
   // Find user's personal workspace for redirect
   const personalTeam = await fullDb

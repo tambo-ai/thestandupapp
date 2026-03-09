@@ -1,4 +1,4 @@
-import { authkit } from '@workos-inc/authkit-nextjs';
+import { authkit, getWorkOS } from '@workos-inc/authkit-nextjs';
 import { type NextRequest, NextResponse } from 'next/server';
 import { db, getFullDb } from '@/lib/db';
 import { sql } from 'kysely';
@@ -123,6 +123,18 @@ export default async function middleware(request: NextRequest) {
       const userName =
         [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
 
+      // Create WorkOS org so Pipes works for personal workspaces
+      const workos = getWorkOS();
+      const org = await workos.organizations.createOrganization({
+        name: `${userName}'s Workspace`,
+      });
+
+      await workos.userManagement.createOrganizationMembership({
+        organizationId: org.id,
+        userId: user.id,
+        roleSlug: 'admin',
+      });
+
       await fullDb.transaction().execute(async (trx) => {
         await trx
           .insertInto('teams')
@@ -131,6 +143,7 @@ export default async function middleware(request: NextRequest) {
             name: `${userName}'s Workspace`,
             slug: `personal-${user.id}`,
             is_personal: 1,
+            workos_organization_id: org.id,
           })
           .execute();
 

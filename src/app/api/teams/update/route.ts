@@ -114,6 +114,15 @@ export async function PATCH(request: Request) {
     updates.slug = slug;
   }
 
+  // Update WorkOS org name first — if this fails, DB stays unchanged.
+  if (updates.name && team.workos_organization_id) {
+    const workos = getWorkOS();
+    await workos.organizations.updateOrganization({
+      organization: team.workos_organization_id,
+      name: updates.name,
+    });
+  }
+
   // Apply updates to local DB
   if (Object.keys(updates).length > 0) {
     await fullDb
@@ -121,19 +130,6 @@ export async function PATCH(request: Request) {
       .set({ ...updates, updated_at: new Date().toISOString() })
       .where("teams.id", "=", teamId)
       .execute();
-  }
-
-  // Sync name to WorkOS if name was updated and team has a WorkOS org
-  if (updates.name && team.workos_organization_id) {
-    try {
-      const workos = getWorkOS();
-      await workos.organizations.updateOrganization({
-        organization: team.workos_organization_id,
-        name: updates.name,
-      });
-    } catch (err) {
-      console.error("Failed to sync team name to WorkOS:", err);
-    }
   }
 
   return NextResponse.json({

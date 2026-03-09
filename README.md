@@ -43,6 +43,7 @@ cp example.env.local .env.local
 | `WORKOS_COOKIE_PASSWORD` | `openssl rand -base64 32` |
 | `NEXT_PUBLIC_WORKOS_REDIRECT_URI` | `http://localhost:3000/api/auth/callback` for local dev |
 | `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | [Turso dashboard](https://turso.tech) |
+| `NEXT_PUBLIC_APP_URL` | Your app URL (defaults to `http://localhost:3000`) |
 
 3. Run database migrations:
 

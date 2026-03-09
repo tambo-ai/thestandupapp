@@ -83,49 +83,40 @@ export async function POST(request: Request) {
     );
   }
 
-  // Delete in order to avoid FK issues
-  // 1. Revoke all invite links
+  // Delete WorkOS organization first — if this fails, DB stays intact.
+  if (team.workos_organization_id) {
+    const workos = getWorkOS();
+    await workos.organizations.deleteOrganization(
+      team.workos_organization_id,
+    );
+  }
+
+  // Delete DB records in order to avoid FK issues
   await fullDb
     .updateTable("invite_links")
     .set({ revoked_at: new Date().toISOString() })
     .where("invite_links.team_id", "=", teamId)
     .execute();
 
-  // 2. Delete all invite links
   await fullDb
     .deleteFrom("invite_links")
     .where("invite_links.team_id", "=", teamId)
     .execute();
 
-  // 3. Delete all connections
   await fullDb
     .deleteFrom("connections")
     .where("connections.team_id", "=", teamId)
     .execute();
 
-  // 4. Delete all memberships
   await fullDb
     .deleteFrom("memberships")
     .where("memberships.team_id", "=", teamId)
     .execute();
 
-  // 5. Delete team
   await fullDb
     .deleteFrom("teams")
     .where("teams.id", "=", teamId)
     .execute();
-
-  // 6. Delete WorkOS organization if exists
-  if (team.workos_organization_id) {
-    try {
-      const workos = getWorkOS();
-      await workos.organizations.deleteOrganization(
-        team.workos_organization_id,
-      );
-    } catch (err) {
-      console.error("Failed to delete WorkOS organization:", err);
-    }
-  }
 
   // Find user's personal workspace for redirect
   const personalTeam = await fullDb
