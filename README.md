@@ -1,6 +1,6 @@
 # The Standup App
 
-AI-powered team standup dashboard built with [Tambo AI](https://tambo.co). Connect your Linear and GitHub accounts, ask natural language questions about your team, and get rich interactive components on a live canvas.
+Multi-tenant AI standup dashboard built with [Tambo AI](https://tambo.co). Create teams, invite members, connect Linear and GitHub via OAuth, and ask natural language questions — the AI renders interactive components on a live canvas.
 
 https://github.com/user-attachments/assets/d17682a7-e9e3-401e-b8a3-998aaf258d06
 
@@ -14,11 +14,12 @@ https://github.com/user-attachments/assets/d17682a7-e9e3-401e-b8a3-998aaf258d06
 
 ## Features
 
-- **Conversational AI canvas** — ask questions in plain English, get interactive components arranged in an adaptive grid (up to 4 at once, dismissable, drag-to-reorder)
-- **Linear + GitHub integration** — pulls issues, PRs, team members, and risk data in real time
+- **Conversational AI canvas** — ask questions in plain English, get interactive components on an adaptive grid (up to 4 at once, dismissable, drag-to-reorder)
+- **Multi-tenant teams** — personal workspaces, shared teams with roles (owner/member), team switching
+- **Invite system** — shareable invite links and email invites with expiry and usage limits
+- **Linear + GitHub OAuth** — connect accounts via WorkOS, data is fetched per-team across all members
 - **Member filter** — focus on specific team members; filters apply across all components and AI responses
-- **Per-user encrypted storage** — API keys are AES-GCM encrypted in localStorage, scoped per user
-- **Google OAuth** — sign-in via Better Auth + Turso
+- **WorkOS AuthKit** — sign-in, session management, and org-level membership sync
 
 ## Setup
 
@@ -37,31 +38,35 @@ cp example.env.local .env.local
 | Variable | Where to get it |
 |----------|----------------|
 | `NEXT_PUBLIC_TAMBO_API_KEY` | [tambo.co/dashboard](https://tambo.co/dashboard) |
-| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` |
-| `BETTER_AUTH_URL` | `http://localhost:3000` for local dev |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
+| `WORKOS_CLIENT_ID` | [WorkOS Dashboard](https://dashboard.workos.com) |
+| `WORKOS_API_KEY` | [WorkOS Dashboard](https://dashboard.workos.com) |
+| `WORKOS_COOKIE_PASSWORD` | `openssl rand -base64 32` |
+| `NEXT_PUBLIC_WORKOS_REDIRECT_URI` | `http://localhost:3000/api/auth/callback` for local dev |
 | `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | [Turso dashboard](https://turso.tech) |
 
-3. Run the database migration:
+3. Run database migrations:
 
 ```bash
-npx @better-auth/cli@latest migrate
+npm run db:migrate
 ```
 
-4. Start the dev server:
+4. Verify the schema (optional):
+
+```bash
+npm run db:verify
+```
+
+5. Start the dev server:
 
 ```bash
 npm run dev
 ```
 
-5. Open [localhost:3000](http://localhost:3000) and sign in with Google.
+6. Open [localhost:3000](http://localhost:3000) and sign in.
 
-6. Open **Settings** and add your API keys:
-   - **GitHub personal access token** — [create one](https://github.com/settings/tokens) with `repo` and `read:org` scopes
-   - **Linear API key** — [create one](https://linear.app/settings/api)
-   - **GitHub org** (optional) — for reliable cross-platform user matching
+7. Open **Settings** and connect your GitHub and Linear accounts via OAuth.
 
-7. Select a team and optionally filter to specific members.
+8. Create or join a team and start asking questions.
 
 ## Components
 
@@ -69,39 +74,50 @@ The AI decides which components to render based on your question.
 
 | Component | Trigger | Data source |
 |-----------|---------|-------------|
-| **TeamOverview** | "show me the team" | Self-fetching (Linear team ID) |
-| **PersonDetail** | "what's [name] working on?" | Self-fetching (Linear user ID + GitHub) |
-| **RiskReport** | "what's at risk?", "blockers" | Self-fetching (Linear team ID) |
+| **TeamOverview** | "show me the team" | Linear team members + stats |
+| **PersonDetail** | "what's [name] working on?" | Linear issues + GitHub PRs |
+| **PullRequestList** | "show PRs for [repo]" | GitHub PRs by repo/org/author |
+| **RiskReport** | "what's at risk?", "blockers" | Overdue/stale/unassigned Linear issues |
 | **WeeklyGoals** | "what are we working on this week?" | AI-assembled from tool results |
 | **SummaryPanel** | Any structured info request | AI-assembled (stats, sections, body text) |
-| **Graph** | "show me a chart of..." | AI-assembled (bar, line, or pie) |
+| **Graph** | "show me a chart of..." | Recharts (bar, line, or pie) |
 
 ## Project structure
 
 ```
 src/
 ├── app/
-│   ├── page.tsx              # Main app shell, system prompt, TamboProvider
-│   ├── login/                # Login page
+│   ├── page.tsx                # Landing page
+│   ├── app/
+│   │   ├── page.tsx            # App entry point
+│   │   └── app-shell.tsx       # Main shell + AI canvas
+│   ├── invite/[token]/         # Invite link acceptance
 │   └── api/
-│       ├── github/           # find-user, prs
-│       └── linear/           # team, issues, risks, cycle
+│       ├── auth/callback/      # WorkOS AuthKit callback
+│       ├── teams/              # Create, delete, update, switch, join, leave, invite, members
+│       ├── connections/        # GitHub/Linear OAuth status
+│       ├── github/             # PR endpoints
+│       └── linear/             # Issues, team, risks, cycle, search
 ├── components/
-│   ├── tambo/                # AI-rendered canvas components
-│   ├── settings-modal.tsx    # API keys, team selection, member filter
-│   └── user-header.tsx       # Top bar with user info
+│   ├── tambo/                  # AI-rendered canvas components
+│   ├── team-settings-modal.tsx # Settings (general, invite, members, connections)
+│   ├── team-switcher.tsx       # Team dropdown + creation
+│   ├── team-creation-form.tsx  # New team form
+│   └── user-header.tsx         # Top bar with user profile
 ├── lib/
-│   ├── tambo.ts              # Component + tool registration
-│   ├── member-filter.ts      # Shared member filter logic (types, hooks, fetching)
-│   ├── user-tokens.ts        # Encrypted per-user localStorage
-│   └── use-fetch-json.ts     # Data fetching hook with auth headers
-└── services/
-    └── population-stats.ts   # Demo data
+│   ├── tambo.ts                # Component + tool registration
+│   ├── db.ts                   # Kysely DB accessors (global, team-scoped, full)
+│   ├── schema.ts               # Database type definitions
+│   ├── team-actions.ts         # Team server actions
+│   ├── auth-actions.ts         # Auth server actions
+│   └── member-filter.ts        # Member filter logic
+├── middleware.ts                # Auth, user sync, team resolution
+└── migrations/                 # Database migrations (001–006)
 ```
 
 ## Tech stack
 
-[Next.js 15](https://nextjs.org) / [React 19](https://react.dev) / [Tambo AI](https://tambo.co) / [Better Auth](https://better-auth.com) + [Turso](https://turso.tech) / [Tailwind CSS v4](https://tailwindcss.com) / [Recharts](https://recharts.org) / [Zod](https://zod.dev)
+[Next.js 15](https://nextjs.org) / [React 19](https://react.dev) / [Tambo AI](https://tambo.co) / [WorkOS AuthKit](https://workos.com/docs/user-management/authkit) / [Turso](https://turso.tech) + [Kysely](https://kysely.dev) / [Tailwind CSS v4](https://tailwindcss.com) / [Recharts](https://recharts.org) / [Zod](https://zod.dev)
 
 ## Scripts
 
@@ -112,6 +128,8 @@ src/
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
 | `npm run lint:fix` | Run ESLint with auto-fix |
+| `npm run db:migrate` | Run database migrations |
+| `npm run db:verify` | Verify database schema |
 
 ## License
 
