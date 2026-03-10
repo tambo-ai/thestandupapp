@@ -2,6 +2,8 @@
 
 Multi-tenant AI standup dashboard built with [Tambo AI](https://tambo.co). Create teams, invite members, connect Linear and GitHub via OAuth, and ask natural language questions — the AI renders interactive components on a live canvas.
 
+**Live at [standup.site](https://standup.site)**
+
 https://github.com/user-attachments/assets/d17682a7-e9e3-401e-b8a3-998aaf258d06
 
 ## What you can ask
