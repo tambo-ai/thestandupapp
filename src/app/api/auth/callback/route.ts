@@ -2,6 +2,7 @@ import { getWorkOS, handleAuth, switchToOrganization } from '@workos-inc/authkit
 import { cookies } from 'next/headers';
 import { sql } from 'kysely';
 import { db, getFullDb } from '@/lib/db';
+import { ensureWorkOSMembership } from '@/lib/team-actions';
 
 export const GET = handleAuth({
   returnPathname: '/app',
@@ -195,10 +196,12 @@ export const GET = handleAuth({
             // If it succeeds but the local writes below fail, Step 5's
             // WorkOS → local sync will reconcile on next login.
             if (invite.workos_organization_id) {
-              await workos.userManagement.createOrganizationMembership({
-                organizationId: invite.workos_organization_id,
-                userId: user.id,
-              });
+              await ensureWorkOSMembership(
+                workos,
+                invite.workos_organization_id,
+                user.id,
+                user.email,
+              );
             }
 
             // Local membership + use_count in a transaction so they

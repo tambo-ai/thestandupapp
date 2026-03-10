@@ -7,6 +7,39 @@ import {
   withAuth,
   switchToOrganization,
 } from '@workos-inc/authkit-nextjs';
+import type { WorkOS } from '@workos-inc/node';
+
+/**
+ * Revoke any pending WorkOS invitations for this email+org, then create an
+ * active org membership. This avoids the "Pending organization memberships
+ * cannot be reactivated" error when a user was previously invited via email
+ * but joined through a different path (e.g. invite link).
+ */
+export async function ensureWorkOSMembership(
+  workos: WorkOS,
+  organizationId: string,
+  userId: string,
+  email: string,
+  roleSlug?: string,
+) {
+  // Revoke any pending email invitations that would block createOrganizationMembership
+  const invitations = await workos.userManagement.listInvitations({
+    email,
+    organizationId,
+  });
+
+  for (const inv of invitations.data) {
+    if (inv.state === 'pending') {
+      await workos.userManagement.revokeInvitation(inv.id);
+    }
+  }
+
+  await workos.userManagement.createOrganizationMembership({
+    organizationId,
+    userId,
+    ...(roleSlug ? { roleSlug } : {}),
+  });
+}
 
 /**
  * Sets the active team cookie after verifying the user is a member.
@@ -151,13 +184,15 @@ export async function joinTeam(
   // Create WorkOS org membership first — if this fails, nothing is
   // written to the DB so there's no stale state. If it succeeds but
   // the DB transaction below fails, the WorkOS → local sync on next
-  // login will reconcile.
+  // login will reconcile. Uses ensureWorkOSMembership to revoke any
+  // pending email invitations that would block direct membership creation.
   if (team.workos_organization_id) {
-    const workos = getWorkOS();
-    await workos.userManagement.createOrganizationMembership({
-      organizationId: team.workos_organization_id,
-      userId: user.id,
-    });
+    await ensureWorkOSMembership(
+      getWorkOS(),
+      team.workos_organization_id,
+      user.id,
+      user.email,
+    );
   }
 
   // Create membership and increment use count in a transaction
