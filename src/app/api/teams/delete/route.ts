@@ -83,40 +83,43 @@ export async function POST(request: Request) {
     );
   }
 
-  // Delete WorkOS organization first — if this fails, DB stays intact.
+  // Delete WorkOS organization first. Treat 404 as already deleted
+  // so retries after a partial failure can still clean up the DB.
   if (team.workos_organization_id) {
     const workos = getWorkOS();
-    await workos.organizations.deleteOrganization(
-      team.workos_organization_id,
-    );
+    try {
+      await workos.organizations.deleteOrganization(
+        team.workos_organization_id,
+      );
+    } catch (err: unknown) {
+      const status = (err as { status?: number }).status;
+      if (status !== 404) throw err;
+    }
   }
 
-  // Delete DB records in order to avoid FK issues
-  await fullDb
-    .updateTable("invite_links")
-    .set({ revoked_at: new Date().toISOString() })
-    .where("invite_links.team_id", "=", teamId)
-    .execute();
+  // Delete all DB records in a transaction so partial failure
+  // doesn't strand orphaned rows.
+  await fullDb.transaction().execute(async (trx) => {
+    await trx
+      .deleteFrom("invite_links")
+      .where("invite_links.team_id", "=", teamId)
+      .execute();
 
-  await fullDb
-    .deleteFrom("invite_links")
-    .where("invite_links.team_id", "=", teamId)
-    .execute();
+    await trx
+      .deleteFrom("connections")
+      .where("connections.team_id", "=", teamId)
+      .execute();
 
-  await fullDb
-    .deleteFrom("connections")
-    .where("connections.team_id", "=", teamId)
-    .execute();
+    await trx
+      .deleteFrom("memberships")
+      .where("memberships.team_id", "=", teamId)
+      .execute();
 
-  await fullDb
-    .deleteFrom("memberships")
-    .where("memberships.team_id", "=", teamId)
-    .execute();
-
-  await fullDb
-    .deleteFrom("teams")
-    .where("teams.id", "=", teamId)
-    .execute();
+    await trx
+      .deleteFrom("teams")
+      .where("teams.id", "=", teamId)
+      .execute();
+  });
 
   // Find user's personal workspace for redirect
   const personalTeam = await fullDb
