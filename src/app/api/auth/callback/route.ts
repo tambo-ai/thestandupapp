@@ -2,6 +2,7 @@ import { getWorkOS, handleAuth, switchToOrganization } from '@workos-inc/authkit
 import { cookies } from 'next/headers';
 import { sql } from 'kysely';
 import { db, getFullDb } from '@/lib/db';
+import { ensureWorkOSMembership } from '@/lib/team-actions';
 
 export const GET = handleAuth({
   returnPathname: '/app',
@@ -29,22 +30,34 @@ export const GET = handleAuth({
       .execute();
 
     // 2. Check if personal team exists using FullDatabase for cross-table join
+    const workos = getWorkOS();
     const fullDb = getFullDb();
     const personalTeam = await fullDb
       .selectFrom('teams')
       .innerJoin('memberships', 'memberships.team_id', 'teams.id')
       .where('memberships.user_id', '=', user.id)
       .where('teams.is_personal', '=', 1)
-      .select('teams.id')
+      .select(['teams.id', 'teams.workos_organization_id'])
       .executeTakeFirst();
 
     let personalTeamId = personalTeam?.id;
 
-    // 3. If no personal team, create one in a transaction
+    // 3. If no personal team, create one with a WorkOS org
     if (!personalTeamId) {
       const teamId = crypto.randomUUID();
       const userName =
         [user.firstName, user.lastName].filter(Boolean).join(' ') || 'User';
+
+      // Create WorkOS org first so Pipes works for personal workspaces
+      const org = await workos.organizations.createOrganization({
+        name: `${userName}'s Workspace`,
+      });
+
+      await workos.userManagement.createOrganizationMembership({
+        organizationId: org.id,
+        userId: user.id,
+        roleSlug: 'admin',
+      });
 
       await fullDb.transaction().execute(async (trx) => {
         await trx
@@ -54,6 +67,7 @@ export const GET = handleAuth({
             name: `${userName}'s Workspace`,
             slug: `personal-${user.id}`,
             is_personal: 1,
+            workos_organization_id: org.id,
           })
           .execute();
 
@@ -69,6 +83,29 @@ export const GET = handleAuth({
       });
 
       personalTeamId = teamId;
+    } else if (personalTeam && !personalTeam.workos_organization_id) {
+      // Backfill: existing personal team without a WorkOS org
+      const teamRow = await fullDb
+        .selectFrom('teams')
+        .where('id', '=', personalTeamId)
+        .select('name')
+        .executeTakeFirst();
+
+      const org = await workos.organizations.createOrganization({
+        name: teamRow?.name ?? `${user.email}'s Workspace`,
+      });
+
+      await workos.userManagement.createOrganizationMembership({
+        organizationId: org.id,
+        userId: user.id,
+        roleSlug: 'admin',
+      });
+
+      await fullDb
+        .updateTable('teams')
+        .set({ workos_organization_id: org.id })
+        .where('id', '=', personalTeamId)
+        .execute();
     }
 
     // 4. Set active_team_id cookie if none exists
@@ -88,7 +125,6 @@ export const GET = handleAuth({
     // 5. Sync WorkOS organization memberships to local DB
     // Handles users invited via WorkOS email invitation who auto-joined the org during sign-up
     try {
-      const workos = getWorkOS();
       const orgMemberships = await workos.userManagement.listOrganizationMemberships({
         userId: user.id,
       });
@@ -160,11 +196,12 @@ export const GET = handleAuth({
             // If it succeeds but the local writes below fail, Step 5's
             // WorkOS → local sync will reconcile on next login.
             if (invite.workos_organization_id) {
-              const workos = getWorkOS();
-              await workos.userManagement.createOrganizationMembership({
-                organizationId: invite.workos_organization_id,
-                userId: user.id,
-              });
+              await ensureWorkOSMembership(
+                workos,
+                invite.workos_organization_id,
+                user.id,
+                user.email,
+              );
             }
 
             // Local membership + use_count in a transaction so they

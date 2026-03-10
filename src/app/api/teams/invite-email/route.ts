@@ -84,28 +84,23 @@ export async function POST(request: Request) {
 
   const workos = getWorkOS();
 
-  // Send invitations via WorkOS
-  const results = await Promise.allSettled(
-    emailBatch.map((email) =>
-      workos.userManagement.sendInvitation({
+  // Send invitations sequentially to stay under Resend's 2 req/s rate limit
+  const failed: string[] = [];
+  let sent = 0;
+
+  for (const email of emailBatch) {
+    try {
+      await workos.userManagement.sendInvitation({
         email,
         organizationId: team.workos_organization_id!,
         inviterUserId: user.id,
         expiresInDays: 7,
-      }),
-    ),
-  );
-
-  const failed: string[] = [];
-  let sent = 0;
-
-  results.forEach((result, i) => {
-    if (result.status === "fulfilled") {
+      });
       sent++;
-    } else {
-      failed.push(emailBatch[i]);
+    } catch {
+      failed.push(email);
     }
-  });
+  }
 
   return NextResponse.json({ sent, failed });
 }
